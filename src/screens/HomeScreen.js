@@ -11,6 +11,7 @@ import GuardianBanner from "../components/GuardianBanner";
 import MapViewComponent from "../components/MapViewComponents";
 import ThreatReportModal from "../components/ThreatReportModal";
 import { analyzeThreatWithAI } from "../services/MockVertexAi";
+import { fetchDynamicSafeHavens } from "../services/PlacesServices";
 import { colors } from "../theme/colors";
 
 const GOOGLE_MAPS_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
@@ -18,6 +19,7 @@ const GOOGLE_MAPS_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
 const HomeScreen = () => {
   const [threatPins, setThreatPins] = useState([]);
   const [destination, setDestination] = useState(null);
+  const [dynamicSafeHavens, setDynamicSafeHavens] = useState([]);
 
   const [isGuardianActive, setIsGuardianActive] = useState(false);
   const [isDeadZoneActive, setIsDeadZoneActive] = useState(false);
@@ -82,6 +84,14 @@ const HomeScreen = () => {
   };
 
   useEffect(() => {
+    if (userLocation) {
+      fetchDynamicSafeHavens(userLocation.latitude, userLocation.longitude)
+        .then((havens) => setDynamicSafeHavens(havens))
+        .catch((err) => console.log(err));
+    }
+  }, [userLocation?.latitude, userLocation?.longitude]);
+
+  useEffect(() => {
     let locationSubscription;
     let headingSubscription;
 
@@ -122,7 +132,10 @@ const HomeScreen = () => {
 
       // Subscribe to device heading updates for the navigation cone
       headingSubscription = await Location.watchHeadingAsync((headingObj) => {
-        const newHeading = headingObj.trueHeading !== -1 ? headingObj.trueHeading : headingObj.magHeading;
+        const newHeading =
+          headingObj.trueHeading !== -1
+            ? headingObj.trueHeading
+            : headingObj.magHeading;
 
         setUserHeading((prevHeading) => {
           // Calculate the shortest path difference to handle 359 -> 1 wrap-around
@@ -160,6 +173,7 @@ const HomeScreen = () => {
           destination={destination}
           userLocation={userLocation}
           userHeading={userHeading}
+          safeHavens={dynamicSafeHavens}
         />
 
         {/* Minimal Search Bar */}

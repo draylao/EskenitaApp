@@ -1,8 +1,8 @@
-import React, { useState, forwardRef } from "react";
+import React, { forwardRef, useMemo, useState } from "react";
 import { Platform, StyleSheet, Text, View } from "react-native";
 import MapView, { Marker, PROVIDER_GOOGLE } from "react-native-maps";
 import MapViewDirections from "react-native-maps-directions";
-import Svg, { Defs, RadialGradient, Stop, Path } from "react-native-svg";
+import Svg, { Defs, Path, RadialGradient, Stop } from "react-native-svg";
 import mapStyle from "../theme/mapStyle.json";
 
 const GOOGLE_MAPS_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
@@ -46,193 +46,191 @@ const getDottedCoordinates = (coordinates, intervalMeters) => {
   return dots;
 };
 
-const MapViewComponent = forwardRef(({ threatPins, destination, userLocation, userHeading }, ref) => {
-  const [lineScale, setLineScale] = useState(1);
-  const [iosSafeRouteCoords, setIosSafeRouteCoords] = useState([]);
-  const [iosAltRouteCoords, setIosAltRouteCoords] = useState([]);
-  const origin = userLocation || { latitude: 15.4828, longitude: 120.9749 }; // Near NEUST
+const MapViewComponent = forwardRef(
+  (
+    { threatPins, destination, userLocation, userHeading, safeHavens = [] },
+    ref,
+  ) => {
+    const [lineScale, setLineScale] = useState(1);
+    const [iosSafeRouteCoords, setIosSafeRouteCoords] = useState([]);
+    const [iosAltRouteCoords, setIosAltRouteCoords] = useState([]);
+    const origin = userLocation || { latitude: 15.4828, longitude: 120.9749 }; // Near NEUST
 
-  const safeHavens = [
-    {
-      id: 1,
-      latlng: { latitude: 15.48, longitude: 120.98 },
-      title: "7-Eleven (24/7)",
-    },
-    {
-      id: 2,
-      latlng: { latitude: 15.475, longitude: 120.985 },
-      title: "Alfmart",
-    },
-    {
-      id: 3,
-      latlng: { latitude: 15.473, longitude: 120.983 },
-      title: "Barangay Hall",
-    },
-  ];
+    const toRad = (value) => (value * Math.PI) / 180;
 
-  const toRad = (value) => (value * Math.PI) / 180;
-  const routeVector = destination
-    ? {
-      x:
-        (destination.longitude - origin.longitude) *
-        Math.cos(toRad((origin.latitude + destination.latitude) / 2)),
-      y: destination.latitude - origin.latitude,
-    }
-    : { x: 0, y: 0 };
+    const routeVector = destination
+      ? {
+          x:
+            (destination.longitude - origin.longitude) *
+            Math.cos(toRad((origin.latitude + destination.latitude) / 2)),
+          y: destination.latitude - origin.latitude,
+        }
+      : { x: 0, y: 0 };
 
-  const projectionOnRoute = (point) => {
-    if (!destination) return -1;
-    const pointVec = {
-      x:
-        (point.longitude - origin.longitude) *
-        Math.cos(toRad((origin.latitude + destination.latitude) / 2)),
-      y: point.latitude - origin.latitude,
+    const projectionOnRoute = (point) => {
+      if (!destination) return -1;
+      const pointVec = {
+        x:
+          (point.longitude - origin.longitude) *
+          Math.cos(toRad((origin.latitude + destination.latitude) / 2)),
+        y: point.latitude - origin.latitude,
+      };
+      const dot = pointVec.x * routeVector.x + pointVec.y * routeVector.y;
+      const lenSq =
+        routeVector.x * routeVector.x + routeVector.y * routeVector.y;
+      return lenSq === 0 ? 0 : dot / lenSq;
     };
-    const dot = pointVec.x * routeVector.x + pointVec.y * routeVector.y;
-    const lenSq = routeVector.x * routeVector.x + routeVector.y * routeVector.y;
-    return lenSq === 0 ? 0 : dot / lenSq;
-  };
 
-  const distanceToRoute = (point) => {
-    if (!destination) return 999;
-    const pointVec = {
-      x:
-        (point.longitude - origin.longitude) *
-        Math.cos(toRad((origin.latitude + destination.latitude) / 2)),
-      y: point.latitude - origin.latitude,
+    const distanceToRoute = (point) => {
+      if (!destination) return 999;
+      const pointVec = {
+        x:
+          (point.longitude - origin.longitude) *
+          Math.cos(toRad((origin.latitude + destination.latitude) / 2)),
+        y: point.latitude - origin.latitude,
+      };
+      const proj = projectionOnRoute(point);
+      const closest = { x: routeVector.x * proj, y: routeVector.y * proj };
+      const dx = pointVec.x - closest.x;
+      const dy = pointVec.y - closest.y;
+      return Math.sqrt(dx * dx + dy * dy) * 111.32; // km per degree
     };
-    const proj = projectionOnRoute(point);
-    const closest = { x: routeVector.x * proj, y: routeVector.y * proj };
-    const dx = pointVec.x - closest.x;
-    const dy = pointVec.y - closest.y;
-    return Math.sqrt(dx * dx + dy * dy) * 111.32; // km per degree
-  };
 
-  const filteredSafeHavens = safeHavens
-    .map((haven) => ({
-      ...haven,
-      projection: projectionOnRoute(haven.latlng),
-      distanceFromRoute: distanceToRoute(haven.latlng),
-    }))
-    .filter(
-      ({ projection, distanceFromRoute }) =>
-        projection >= 0 && projection <= 1 && distanceFromRoute <= 0.25,
-    )
-    .sort((a, b) => a.projection - b.projection);
+    const forwardHavens = safeHavens
+      .map((haven) => ({
+        ...haven,
+        projection: projectionOnRoute(haven.latlng),
+        distanceFromRoute: distanceToRoute(haven.latlng),
+      }))
+      .filter(({ projection }) => projection > 0.1 && projection < 0.9); // Only mid-route spots
 
-  const safeRouteWaypoints = filteredSafeHavens.map((haven) => haven.latlng);
+    const bestSafetyAnchor = useMemo(() => {
+      if (forwardHavens.length === 0) return [];
 
-  // Base width scaled by zoom level. Size is back to medium.
-  const routeStrokeWidth = Math.max(3, Math.round(5 * lineScale));
-  // Gap between squared dots scales with their size. Multiplier increased to 10 to drastically reduce the amount of dots.
-  const routeDashPattern = Platform.OS === "ios" ? [routeStrokeWidth, routeStrokeWidth * 10] : [0, routeStrokeWidth * 10];
+      const sorted = [...forwardHavens].sort(
+        (a, b) => a.distanceFromRoute - b.distanceFromRoute,
+      );
+      return [sorted[0].latlng]; // Pick the most central populated avenue spot
+    }, [forwardHavens]);
 
-  return (
-    <View style={styles.container}>
-      <MapView
-        ref={ref}
-        provider={PROVIDER_GOOGLE}
-        style={styles.map}
-        customMapStyle={mapStyle}
-        initialRegion={{
-          latitude: origin.latitude,
-          longitude: origin.longitude,
-          latitudeDelta: 0.03,
-          longitudeDelta: 0.03,
-        }}
-        onRegionChangeComplete={(region) => {
-          const newScale = 0.03 / region.latitudeDelta;
-          setLineScale(Math.min(Math.max(newScale, 0.5), 3));
-        }}
-      >
-        {/* User Location Marker */}
-        <Marker coordinate={origin} title="Current Location" anchor={{ x: 0.5, y: 0.5 }}>
-          <View style={styles.userMarkerContainer}>
-            {/* The Directional Cone */}
-            <View style={[styles.coneWrapper, { transform: [{ rotate: `${userHeading || 0}deg` }] }]}>
-              <Svg height="100" width="100">
-                <Defs>
-                  <RadialGradient id="coneGrad" cx="50" cy="50" r="50" gradientUnits="userSpaceOnUse">
-                    <Stop offset="0" stopColor="#1A73E8" stopOpacity="0.5" />
-                    <Stop offset="1" stopColor="#1A73E8" stopOpacity="0" />
-                  </RadialGradient>
-                </Defs>
-                <Path d="M 50,50 L 20,10 Q 50,-5 80,10 Z" fill="url(#coneGrad)" />
-              </Svg>
-            </View>
+    const routeStrokeWidth = Math.max(3, Math.round(5 * lineScale));
+    const routeDashPattern =
+      Platform.OS === "ios"
+        ? [routeStrokeWidth, routeStrokeWidth * 10]
+        : [0, routeStrokeWidth * 10];
 
-            {/* The Solid Blue Dot */}
-            <View style={styles.userLocationDot} />
-          </View>
-        </Marker>
-
-        {destination && (
-          <>
-            <Marker coordinate={destination} title="Destination">
-              <View style={styles.customMarker}>
-                <Text style={{ fontSize: 24 }}>📍</Text>
+    return (
+      <View style={styles.container}>
+        <MapView
+          ref={ref}
+          provider={PROVIDER_GOOGLE}
+          style={styles.map}
+          customMapStyle={mapStyle}
+          initialRegion={{
+            latitude: origin.latitude,
+            longitude: origin.longitude,
+            latitudeDelta: 0.03,
+            longitudeDelta: 0.03,
+          }}
+          onRegionChangeComplete={(region) => {
+            const newScale = 0.03 / region.latitudeDelta;
+            setLineScale(Math.min(Math.max(newScale, 0.5), 3));
+          }}
+        >
+          {/* User Location Marker */}
+          <Marker
+            coordinate={origin}
+            title="Current Location"
+            anchor={{ x: 0.5, y: 0.5 }}
+          >
+            <View style={styles.userMarkerContainer}>
+              {/* The Directional Cone */}
+              <View
+                style={[
+                  styles.coneWrapper,
+                  { transform: [{ rotate: `${userHeading || 0}deg` }] },
+                ]}
+              >
+                <Svg height="100" width="100">
+                  <Defs>
+                    <RadialGradient
+                      id="coneGrad"
+                      cx="50"
+                      cy="50"
+                      r="50"
+                      gradientUnits="userSpaceOnUse"
+                    >
+                      <Stop offset="0" stopColor="#1A73E8" stopOpacity="0.5" />
+                      <Stop offset="1" stopColor="#1A73E8" stopOpacity="0" />
+                    </RadialGradient>
+                  </Defs>
+                  <Path
+                    d="M 50,50 L 20,10 Q 50,-5 80,10 Z"
+                    fill="url(#coneGrad)"
+                  />
+                </Svg>
               </View>
-            </Marker>
 
-            <MapViewDirections
-              origin={origin}
-              destination={destination}
-              waypoints={safeRouteWaypoints}
-              apikey={GOOGLE_MAPS_API_KEY}
-              strokeWidth={routeStrokeWidth}
-              strokeColor="#2196F3"
-              lineCap="round"
-              lineDashPattern={routeDashPattern}
-              mode="DRIVING"
-              optimizeWaypoints={false}
-              zIndex={3}
-            />
+              {/* The Solid Blue Dot */}
+              <View style={styles.userLocationDot} />
+            </View>
+          </Marker>
 
-            <MapViewDirections
-              origin={origin}
-              destination={destination}
-              apikey={GOOGLE_MAPS_API_KEY}
-              strokeWidth={routeStrokeWidth}
-              strokeColor="#888888"
-              lineCap="round"
-              lineDashPattern={routeDashPattern}
-              mode="DRIVING"
-              optimizeWaypoints={false}
-              zIndex={2}
-            />
+          {destination && (
+            <>
+              <Marker coordinate={destination} title="Destination">
+                <View style={styles.customMarker}>
+                  <Text style={{ fontSize: 24 }}>📍</Text>
+                </View>
+              </Marker>
 
+              <MapViewDirections
+                origin={origin}
+                destination={destination}
+                waypoints={bestSafetyAnchor}
+                apikey={GOOGLE_MAPS_API_KEY}
+                strokeWidth={routeStrokeWidth}
+                strokeColor="#2196F3"
+                lineCap="round"
+                lineDashPattern={routeDashPattern}
+                mode="WALKING"
+                optimizeWaypoints={true}
+                zIndex={3}
+              />
 
-          </>
-        )}
+              <MapViewDirections
+                origin={origin}
+                destination={destination}
+                apikey={GOOGLE_MAPS_API_KEY}
+                strokeWidth={routeStrokeWidth}
+                strokeColor="#888888"
+                lineCap="round"
+                lineDashPattern={routeDashPattern}
+                mode="WALKING"
+                optimizeWaypoints={false}
+                zIndex={2}
+              />
+            </>
+          )}
 
-        {destination &&
-          filteredSafeHavens.map((haven) => (
+          {forwardHavens.slice(0, 5).map((haven) => (
             <Marker
               key={haven.id}
               coordinate={haven.latlng}
               title={haven.title}
             >
               <View style={styles.customMarker}>
-                <Text style={{ fontSize: 22 }}>🟢</Text>
+                <Text style={{ fontSize: 16 }}>🛡️</Text>
               </View>
             </Marker>
           ))}
+        </MapView>
+      </View>
+    );
+  },
+);
 
-        {threatPins.map((pin, index) => (
-          <Marker
-            key={`threat-${index}`}
-            coordinate={pin.coordinates}
-            title="Threat Detected"
-          >
-            <View style={styles.customMarker}>
-              <Text style={{ fontSize: 22 }}>🚨</Text>
-            </View>
-          </Marker>
-        ))}
-      </MapView>
-    </View>
-  );
-});
+MapViewComponent.displayName = "MapViewComponent";
 
 const styles = StyleSheet.create({
   container: { ...StyleSheet.absoluteFillObject },
