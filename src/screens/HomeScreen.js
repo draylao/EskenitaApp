@@ -1,9 +1,10 @@
 import BottomSheet, { BottomSheetView } from "@gorhom/bottom-sheet";
 import * as Location from "expo-location";
-import { Link, Search, Timer, TriangleAlert } from "lucide-react-native";
+import { Link, Timer, TriangleAlert } from "lucide-react-native";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { GooglePlacesAutocomplete } from "react-native-google-places-autocomplete";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import DeadManSwitchTimer from "../components/DeadManSwitchTimer";
 import GuardianBanner from "../components/GuardianBanner";
@@ -11,6 +12,8 @@ import MapViewComponent from "../components/MapViewComponents";
 import ThreatReportModal from "../components/ThreatReportModal";
 import { analyzeThreatWithAI } from "../services/MockVertexAi";
 import { colors } from "../theme/colors";
+
+const GOOGLE_MAPS_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
 
 const HomeScreen = () => {
   const [threatPins, setThreatPins] = useState([]);
@@ -23,6 +26,7 @@ const HomeScreen = () => {
 
   const bottomSheetRef = useRef(null);
   const insets = useSafeAreaInsets();
+  const googlePlacesRef = useRef(null);
 
   const snapPoints = useMemo(() => {
     return [insets.bottom > 0 ? "12%" : "10%"];
@@ -39,6 +43,7 @@ const HomeScreen = () => {
 
   const handleClearRoute = () => {
     setDestination(null);
+    googlePlacesRef.current?.setAddressText("");
   };
 
   const handleShareGuardian = () => {
@@ -120,15 +125,41 @@ const HomeScreen = () => {
 
         {/* Minimal Search Bar */}
         <View style={styles.searchContainer}>
-          <TouchableOpacity
-            style={styles.searchBar}
-            onPress={handleSetDestination}
-          >
-            <Search size={18} color="#888" style={styles.searchIcon} />
-            <Text style={styles.searchText}>
-              {destination ? "Routing to Destination..." : "Search here"}
-            </Text>
-          </TouchableOpacity>
+          <GooglePlacesAutocomplete
+            ref={googlePlacesRef}
+            placeholder={
+              destination ? "Routing to Destination..." : "Search here"
+            }
+            fetchDetails={true} // Crucial to grab the lat/lng details
+            onPress={(data, details = null) => {
+              if (details) {
+                setDestination({
+                  latitude: details.geometry.location.lat,
+                  longitude: details.geometry.location.lng,
+                });
+              }
+            }}
+            onFail={(error) => {
+              console.error("Google Places API Error:", error);
+              // Optional: Alert it to your screen so you see it instantly during development
+              Alert.alert("API Error", error);
+            }}
+            query={{
+              key: GOOGLE_MAPS_API_KEY,
+              language: "en",
+              location: `${userLocation.latitude},${userLocation.longitude}`,
+              radius: "20000", // Favors local results near the user
+            }}
+            styles={{
+              container: { flex: 1 },
+              textInputContainer: styles.textInputContainer,
+              textInput: styles.textInput,
+              listView: styles.listView,
+              row: styles.searchRow,
+              description: styles.searchDescription,
+            }}
+            enablePoweredByContainer={false}
+          />
           {destination && (
             <TouchableOpacity
               style={styles.clearBtn}
@@ -223,31 +254,58 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   sosBackground: { backgroundColor: "rgba(255,0,0,0.4)" },
 
-  // Custom Minimal Layout
+  // Updated Dynamic Autocomplete Layout
   searchContainer: {
     position: "absolute",
     top: 60,
     left: 16,
     right: 16,
     flexDirection: "row",
-    alignItems: "center",
-    zIndex: 10,
+    alignItems: "flex-start", // Allows dropdown to spread downward naturally
+    zIndex: 999, // Needs to clear everything on the map viewport
+    elevation: 999,
   },
-  searchBar: {
-    flex: 1,
+  textInputContainer: {
+    backgroundColor: "transparent",
+    borderTopWidth: 0,
+    borderBottomWidth: 0,
     flexDirection: "row",
+    alignItems: "center",
+  },
+  textInput: {
     backgroundColor: "#FFFFFF",
+    height: 48,
+    borderRadius: 24,
     paddingVertical: 14,
     paddingHorizontal: 16,
-    borderRadius: 24,
-    alignItems: "center",
+    fontSize: 16,
+    color: "#666",
     shadowColor: "#000",
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 4,
   },
-  searchIcon: { fontSize: 18, marginRight: 10, color: "#888" },
-  searchText: { color: "#666", fontSize: 16 },
+  listView: {
+    position: "absolute", // CRITICAL: Makes the list float instead of expanding the row container
+    top: 55,
+    left: 0,
+    right: 0,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    marginTop: 8,
+    shadowColor: "#000",
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 5,
+  },
+  searchRow: {
+    padding: 14,
+    height: 50,
+  },
+  searchDescription: {
+    color: "#333",
+    fontSize: 14,
+  },
   clearBtn: {
     marginLeft: 10,
     backgroundColor: "#FFFFFF",
