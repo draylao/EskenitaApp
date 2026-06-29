@@ -100,22 +100,47 @@ const MapViewComponent = forwardRef(
       .map((haven) => ({
         ...haven,
         projection: projectionOnRoute(haven.latlng),
-        distanceFromRoute: distanceToRoute(haven.latlng),
+        distanceFromRoute: distanceToRoute(haven.latlng), // Distance in km from baseline corridor
       }))
-      // Keep spots that are ahead of origin (0.0) and before destination (1.0)
       .filter(({ projection }) => projection > 0.05 && projection < 0.95);
 
-    const structuredSafeRouteWaypoints = useMemo(() => {
+    const balancedSafeWaypoints = useMemo(() => {
       if (!destination || forwardHavens.length === 0) return [];
+      const MAX_DETOUR_THRESHOLD = 0.25;
+      const PROGRESS_WINDOW_STRIDE = 0.2;
 
-      return (
-        [...forwardHavens]
-          // Filter out safe spots too far off-route (e.g. further than 1.5 km away from the baseline corridor)
-          .filter((haven) => haven.distanceFromRoute < 1.5)
-          // CRITICAL: Sort by projection (0 -> 1) so waypoints follow chronological movement
-          .sort((a, b) => a.projection - b.projection)
-          .map((haven) => haven.latlng)
-      );
+      const linearCorridorSpots = forwardHavens
+        .filter((haven) => haven.distanceFromRoute <= MAX_DETOUR_THRESHOLD)
+        .sort((a, b) => a.projection - b.projection);
+
+      const smoothedWaypoints = [];
+      let currentWindowEnd = PROGRESS_WINDOW_STRIDE;
+      let bestSpotInWindow = null;
+
+      for (const spot of linearCorridorSpots) {
+        // If the spot falls past the current milestone bucket, lock in the best option from the previous window
+        while (spot.projection > currentWindowEnd) {
+          if (bestSpotInWindow) {
+            smoothedWaypoints.push(bestSpotInWindow.latlng);
+            bestSpotInWindow = null;
+          }
+          currentWindowEnd += PROGRESS_WINDOW_STRIDE;
+        }
+
+        // Within the current chunk window, find the spot that stays closest to the main road line
+        if (
+          !bestSpotInWindow ||
+          spot.distanceFromRoute < bestSpotInWindow.distanceFromRoute
+        ) {
+          bestSpotInWindow = spot;
+        }
+      }
+
+      if (bestSpotInWindow) {
+        smoothedWaypoints.push(bestSpotInWindow.latlng);
+      }
+
+      return smoothedWaypoints;
     }, [forwardHavens, destination]);
 
     const routeStrokeWidth = Math.max(3, Math.round(5 * lineScale));
@@ -149,7 +174,6 @@ const MapViewComponent = forwardRef(
             anchor={{ x: 0.5, y: 0.5 }}
           >
             <View style={styles.userMarkerContainer}>
-              {/* The Directional Cone */}
               <View
                 style={[
                   styles.coneWrapper,
@@ -175,8 +199,6 @@ const MapViewComponent = forwardRef(
                   />
                 </Svg>
               </View>
-
-              {/* The Solid Blue Dot */}
               <View style={styles.userLocationDot} />
             </View>
           </Marker>
@@ -189,20 +211,22 @@ const MapViewComponent = forwardRef(
                 </View>
               </Marker>
 
+              {/* The Blue Optimized Balance Route */}
               <MapViewDirections
                 origin={origin}
                 destination={destination}
-                waypoints={structuredSafeRouteWaypoints} // Now feeds all sequential points
+                waypoints={balancedSafeWaypoints} // Uses the mathematically streamlined list of safe spots
                 apikey={GOOGLE_MAPS_API_KEY}
                 strokeWidth={routeStrokeWidth}
                 strokeColor="#2196F3"
                 lineCap="round"
                 lineDashPattern={routeDashPattern}
                 mode="WALKING"
-                optimizeWaypoints={false} // False preserves your chronological projection sequencing
+                optimizeWaypoints={false} // Retain false because our code handles chronological progression spacing
                 zIndex={3}
               />
 
+              {/* Underlying standard baseline path for reference */}
               <MapViewDirections
                 origin={origin}
                 destination={destination}
@@ -218,6 +242,7 @@ const MapViewComponent = forwardRef(
             </>
           )}
 
+          {/* Render all surrounding safety points */}
           {safeHavens.map((haven) => (
             <Marker
               key={haven.id}
