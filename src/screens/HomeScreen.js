@@ -85,12 +85,43 @@ const HomeScreen = () => {
 
   useEffect(() => {
     if (userLocation) {
-      fetchDynamicSafeHavens(userLocation.latitude, userLocation.longitude)
-        .then((havens) => setDynamicSafeHavens(havens))
-        .catch((err) => console.log(err));
-    }
-  }, [userLocation?.latitude, userLocation?.longitude]);
+      const getJourneySafeHavens = async () => {
+        try {
+          // 1. Always fetch safe spots around user's current location
+          const startHavens = await fetchDynamicSafeHavens(
+            userLocation.latitude,
+            userLocation.longitude,
+          );
 
+          let endHavens = [];
+          // 2. If a destination is chosen, fetch safe spots around the destination too
+          if (destination) {
+            endHavens = await fetchDynamicSafeHavens(
+              destination.latitude,
+              destination.longitude,
+            );
+          }
+
+          // 3. Combine and filter out any duplicates by their unique ID
+          const combined = [...startHavens, ...endHavens];
+          const uniqueHavens = Array.from(
+            new Map(combined.map((haven) => [haven.id, haven])).values(),
+          );
+
+          setDynamicSafeHavens(uniqueHavens);
+        } catch (err) {
+          console.error("Error aggregating safe havens along route:", err);
+        }
+      };
+
+      getJourneySafeHavens();
+    }
+  }, [
+    userLocation?.latitude,
+    userLocation?.longitude,
+    destination?.latitude,
+    destination?.longitude,
+  ]);
   useEffect(() => {
     let locationSubscription;
     let headingSubscription;
