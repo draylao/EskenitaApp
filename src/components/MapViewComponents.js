@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, forwardRef } from "react";
 import { Platform, StyleSheet, Text, View } from "react-native";
 import MapView, { Marker, PROVIDER_GOOGLE } from "react-native-maps";
 import MapViewDirections from "react-native-maps-directions";
@@ -45,7 +45,7 @@ const getDottedCoordinates = (coordinates, intervalMeters) => {
   return dots;
 };
 
-const MapViewComponent = ({ threatPins, destination, userLocation }) => {
+const MapViewComponent = forwardRef(({ threatPins, destination, userLocation }, ref) => {
   const [lineScale, setLineScale] = useState(1);
   const [iosSafeRouteCoords, setIosSafeRouteCoords] = useState([]);
   const [iosAltRouteCoords, setIosAltRouteCoords] = useState([]);
@@ -129,6 +129,7 @@ const MapViewComponent = ({ threatPins, destination, userLocation }) => {
   return (
     <View style={styles.container}>
       <MapView
+        ref={ref}
         provider={PROVIDER_GOOGLE}
         style={styles.map}
         customMapStyle={mapStyle}
@@ -216,7 +217,7 @@ const MapViewComponent = ({ threatPins, destination, userLocation }) => {
       </MapView>
     </View>
   );
-};
+});
 
 const styles = StyleSheet.create({
   container: { ...StyleSheet.absoluteFillObject },
