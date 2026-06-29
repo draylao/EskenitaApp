@@ -24,7 +24,7 @@ const HomeScreen = () => {
   const insets = useSafeAreaInsets();
 
   const snapPoints = useMemo(() => {
-    return [insets.bottom > 0 ? "18%" : "14%"];
+    return [insets.bottom > 0 ? "12%" : "10%"];
   }, [insets.bottom]);
 
   const handleSetDestination = () => {
@@ -105,7 +105,7 @@ const HomeScreen = () => {
               onPress={() => setIsModalVisible(true)}
             >
               <TriangleAlert
-                size={36}
+                size={22}
                 color="#333"
                 style={styles.toolbarIcon}
               />
@@ -117,7 +117,7 @@ const HomeScreen = () => {
               style={styles.toolbarItem}
               onPress={handleShareGuardian}
             >
-              <Link size={36} color="#333" style={styles.toolbarIcon} />
+              <Link size={22} color="#333" style={styles.toolbarIcon} />
               <Text style={styles.toolbarLabel}>Share Link</Text>
             </TouchableOpacity>
 
@@ -130,7 +130,7 @@ const HomeScreen = () => {
               onPress={() => setIsDeadZoneActive(!isDeadZoneActive)}
             >
               <Timer
-                size={36}
+                size={22}
                 color={isDeadZoneActive ? "#EF4444" : "#333"}
                 style={styles.toolbarIcon}
               />
@@ -214,24 +214,24 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-around",
     alignItems: "center",
-    paddingVertical: 10,
+    paddingVertical: 4,
     paddingHorizontal: 10,
   },
   toolbarItem: {
     alignItems: "center",
     justifyContent: "center",
-    padding: 8,
-    width: 80,
+    padding: 3,
+    width: 55,
   },
   activeToolbarItem: {
     backgroundColor: "rgba(0, 0, 0, 0.05)",
     borderRadius: 12,
   },
-  toolbarIcon: { fontSize: 24, marginBottom: 4 },
-  toolbarLabel: { fontSize: 12, color: "#333", fontWeight: "500" },
+  toolbarIcon: { fontSize: 24, marginBottom: 1 },
+  toolbarLabel: { fontSize: 10, color: "#333", fontWeight: "500" },
   timerOverlayContainer: {
     position: "absolute",
-    bottom: 150, // Floating safely just above your 14%-18% Bottom Sheet
+    bottom: 120, // Adjusted for smaller toolbar height
     left: 16,
     right: 16,
     zIndex: 20, // Places it cleanly over the map canvas layer
