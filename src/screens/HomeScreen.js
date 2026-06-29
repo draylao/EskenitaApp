@@ -1,7 +1,9 @@
 import BottomSheet, { BottomSheetView } from "@gorhom/bottom-sheet";
-import React, { useMemo, useRef, useState } from "react";
+import { Link, Search, Timer, TriangleAlert } from "lucide-react-native";
+import { useMemo, useRef, useState } from "react";
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import DeadManSwitchTimer from "../components/DeadManSwitchTimer";
 import GuardianBanner from "../components/GuardianBanner";
 import MapViewComponent from "../components/MapViewComponents";
@@ -19,7 +21,11 @@ const HomeScreen = () => {
   const [isSosTriggered, setIsSosTriggered] = useState(false);
 
   const bottomSheetRef = useRef(null);
-  const snapPoints = useMemo(() => ["14%"], []); // Set low height to keep it minimal
+  const insets = useSafeAreaInsets();
+
+  const snapPoints = useMemo(() => {
+    return [insets.bottom > 0 ? "18%" : "14%"];
+  }, [insets.bottom]);
 
   const handleSetDestination = () => {
     setDestination({ latitude: 15.4716, longitude: 120.9822 });
@@ -59,7 +65,7 @@ const HomeScreen = () => {
             style={styles.searchBar}
             onPress={handleSetDestination}
           >
-            <Text style={styles.searchIcon}>🔍</Text>
+            <Search size={18} color="#888" style={styles.searchIcon} />
             <Text style={styles.searchText}>
               {destination ? "Routing to Destination..." : "Search here"}
             </Text>
@@ -87,13 +93,22 @@ const HomeScreen = () => {
           backgroundStyle={styles.sheetBackground}
           handleIndicatorStyle={{ display: "none" }} // Completely flat minimalist design
         >
-          <BottomSheetView style={styles.toolbarContent}>
+          <BottomSheetView
+            style={[
+              styles.toolbarContent,
+              { paddingBottom: insets.bottom > 0 ? insets.bottom : 12 },
+            ]}
+          >
             {/* Action Item 1 */}
             <TouchableOpacity
               style={styles.toolbarItem}
               onPress={() => setIsModalVisible(true)}
             >
-              <Text style={styles.toolbarIcon}>⚠️</Text>
+              <TriangleAlert
+                size={36}
+                color="#333"
+                style={styles.toolbarIcon}
+              />
               <Text style={styles.toolbarLabel}>Report</Text>
             </TouchableOpacity>
 
@@ -102,7 +117,7 @@ const HomeScreen = () => {
               style={styles.toolbarItem}
               onPress={handleShareGuardian}
             >
-              <Text style={styles.toolbarIcon}>🔗</Text>
+              <Link size={36} color="#333" style={styles.toolbarIcon} />
               <Text style={styles.toolbarLabel}>Share Link</Text>
             </TouchableOpacity>
 
@@ -114,8 +129,12 @@ const HomeScreen = () => {
               ]}
               onPress={() => setIsDeadZoneActive(!isDeadZoneActive)}
             >
-              <Text style={styles.toolbarIcon}>⏱️</Text>
-              <Text style={styles.toolbarLabel}>DeadZone</Text>
+              <Timer
+                size={36}
+                color={isDeadZoneActive ? "#EF4444" : "#333"}
+                style={styles.toolbarIcon}
+              />
+              <Text style={styles.toolbarLabel}>Dead Zone</Text>
             </TouchableOpacity>
           </BottomSheetView>
         </BottomSheet>

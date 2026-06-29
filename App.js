@@ -1,14 +1,14 @@
-import React from "react";
-import { SafeAreaView, StatusBar, StyleSheet } from "react-native";
+import { StatusBar, StyleSheet } from "react-native";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 import HomeScreen from "./src/screens/HomeScreen";
 import { colors } from "./src/theme/colors";
 
 export default function App() {
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaProvider style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={colors.background} />
       <HomeScreen />
-    </SafeAreaView>
+    </SafeAreaProvider>
   );
 }
 
