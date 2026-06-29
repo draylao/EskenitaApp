@@ -81,7 +81,7 @@ const HomeScreen = () => {
         </View>
 
         <GuardianBanner
-          isActive={isGuardianActive}
+          isActive={isGuardianActive && !isDeadZoneActive}
           onCancel={() => setIsGuardianActive(false)}
         />
 
@@ -139,15 +139,16 @@ const HomeScreen = () => {
           </BottomSheetView>
         </BottomSheet>
 
-        {/* Hidden Engine Component processing DeadZone logic */}
-        <View style={{ height: 0, width: 0 }}>
-          <DeadManSwitchTimer
-            isActive={isDeadZoneActive}
-            onActivate={() => setIsDeadZoneActive(true)}
-            onCancel={() => setIsDeadZoneActive(false)}
-            onTriggerSOS={handleSOS}
-          />
-        </View>
+        {isDeadZoneActive && (
+          <View style={styles.timerOverlayContainer}>
+            <DeadManSwitchTimer
+              isActive={isDeadZoneActive}
+              onActivate={() => setIsDeadZoneActive(true)}
+              onCancel={() => setIsDeadZoneActive(false)}
+              onTriggerSOS={handleSOS}
+            />
+          </View>
+        )}
 
         <ThreatReportModal
           visible={isModalVisible}
@@ -228,6 +229,13 @@ const styles = StyleSheet.create({
   },
   toolbarIcon: { fontSize: 24, marginBottom: 4 },
   toolbarLabel: { fontSize: 12, color: "#333", fontWeight: "500" },
+  timerOverlayContainer: {
+    position: "absolute",
+    bottom: 150, // Floating safely just above your 14%-18% Bottom Sheet
+    left: 16,
+    right: 16,
+    zIndex: 20, // Places it cleanly over the map canvas layer
+  },
 });
 
 export default HomeScreen;

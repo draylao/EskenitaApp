@@ -1,10 +1,5 @@
 import { useEffect, useRef } from "react";
-import {
-    Animated,
-    StyleSheet,
-    Text,
-    TouchableOpacity
-} from "react-native";
+import { Animated, StyleSheet, Text, TouchableOpacity } from "react-native";
 import { colors } from "../theme/colors";
 
 const GuardianBanner = ({ isActive, onCancel }) => {
@@ -46,7 +41,7 @@ const GuardianBanner = ({ isActive, onCancel }) => {
 const styles = StyleSheet.create({
   container: {
     position: "absolute",
-    top: 50,
+    bottom: 160,
     left: 20,
     right: 20,
     backgroundColor: "rgba(57, 255, 20, 0.15)",

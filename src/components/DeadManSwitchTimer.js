@@ -11,6 +11,12 @@ const DeadManSwitchTimer = ({
   const [timeLeft, setTimeLeft] = useState(240); // 4 minutes
 
   useEffect(() => {
+    if (!isActive) {
+      setTimeLeft(240);
+    }
+  }, [isActive]);
+
+  useEffect(() => {
     let interval;
     if (isActive && timeLeft > 0) {
       interval = setInterval(() => {
@@ -31,16 +37,11 @@ const DeadManSwitchTimer = ({
   };
 
   const handleCancel = () => {
-    setTimeLeft(240);
     onCancel();
   };
 
   if (!isActive) {
-    return (
-      <TouchableOpacity style={styles.activateBtn} onPress={onActivate}>
-        <Text style={styles.activateText}>Enter Dead Zone</Text>
-      </TouchableOpacity>
-    );
+    return null;
   }
 
   return (
