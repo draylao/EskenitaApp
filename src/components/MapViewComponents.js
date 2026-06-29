@@ -1,7 +1,9 @@
 import { StyleSheet, View } from "react-native";
-import MapView, { Marker, Polyline } from "react-native-maps";
+import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from "react-native-maps";
 import { colors } from "../theme/colors";
 import mapStyle from "../theme/mapStyle.json";
+
+const GOOGLE_MAPS_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
 
 const MapViewComponent = ({ threatPins }) => {
   // Mock Coordinates anchored in Cabanatuan City
@@ -42,6 +44,7 @@ const MapViewComponent = ({ threatPins }) => {
   return (
     <View style={styles.container}>
       <MapView
+        provider={PROVIDER_GOOGLE}
         style={styles.map}
         customMapStyle={mapStyle}
         initialRegion={{
