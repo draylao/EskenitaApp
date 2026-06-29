@@ -1,6 +1,6 @@
 import BottomSheet, { BottomSheetView } from "@gorhom/bottom-sheet";
 import * as Location from "expo-location";
-import { Link, Timer, TriangleAlert } from "lucide-react-native";
+import { Link, Navigation, Search, Timer, TriangleAlert } from "lucide-react-native";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
@@ -25,6 +25,7 @@ const HomeScreen = () => {
   const [isSosTriggered, setIsSosTriggered] = useState(false);
 
   const bottomSheetRef = useRef(null);
+  const mapRef = useRef(null);
   const insets = useSafeAreaInsets();
   const googlePlacesRef = useRef(null);
 
@@ -63,6 +64,20 @@ const HomeScreen = () => {
     Alert.alert("CRITICAL", "Siren & Offline SMS triggered!", [
       { text: "Dismiss", onPress: () => setIsSosTriggered(false) },
     ]);
+  };
+
+  const handleRecenter = () => {
+    if (mapRef.current && userLocation) {
+      mapRef.current.animateCamera(
+        {
+          center: {
+            latitude: userLocation.latitude,
+            longitude: userLocation.longitude,
+          },
+        },
+        { duration: 1000 }
+      );
+    }
   };
 
   useEffect(() => {
@@ -118,6 +133,7 @@ const HomeScreen = () => {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <View style={[styles.container, isSosTriggered && styles.sosBackground]}>
         <MapViewComponent
+          ref={mapRef}
           threatPins={threatPins}
           destination={destination}
           userLocation={userLocation}
@@ -174,6 +190,11 @@ const HomeScreen = () => {
           isActive={isGuardianActive && !isDeadZoneActive}
           onCancel={() => setIsGuardianActive(false)}
         />
+
+        {/* Recenter Map Button */}
+        <TouchableOpacity style={styles.recenterButton} onPress={handleRecenter}>
+          <Navigation size={24} color="#FFFFFF" fill="#FFFFFF" style={{ marginRight: 2, marginTop: 2 }} />
+        </TouchableOpacity>
 
         {/* Modern Toolbar Component on Bottom Layer */}
         <BottomSheet
@@ -338,20 +359,39 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     padding: 3,
-    width: 55,
+    minWidth: 75,
   },
   activeToolbarItem: {
     backgroundColor: "rgba(0, 0, 0, 0.05)",
     borderRadius: 12,
   },
   toolbarIcon: { fontSize: 24, marginBottom: 1 },
-  toolbarLabel: { fontSize: 10, color: "#333", fontWeight: "500" },
+  toolbarLabel: { fontSize: 10, color: "#333", fontWeight: "500", textAlign: "center" },
   timerOverlayContainer: {
     position: "absolute",
     bottom: 120, // Adjusted for smaller toolbar height
     left: 16,
     right: 16,
     zIndex: 20, // Places it cleanly over the map canvas layer
+  },
+  recenterButton: {
+    position: "absolute",
+    bottom: 110,
+    right: 16,
+    backgroundColor: "transparent",
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    borderWidth: 2,
+    borderColor: "#FFFFFF",
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.5,
+    shadowRadius: 4,
+    elevation: 6,
+    zIndex: 10,
   },
 });
 

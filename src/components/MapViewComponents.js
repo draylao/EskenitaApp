@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { Dimensions, Platform, StyleSheet, Text, View } from "react-native";
+import React, { useState, forwardRef } from "react";
+import { Platform, StyleSheet, Text, View } from "react-native";
 import MapView, { Marker, PROVIDER_GOOGLE } from "react-native-maps";
 import MapViewDirections from "react-native-maps-directions";
 import mapStyle from "../theme/mapStyle.json";
@@ -45,7 +45,7 @@ const getDottedCoordinates = (coordinates, intervalMeters) => {
   return dots;
 };
 
-const MapViewComponent = ({ threatPins, destination, userLocation }) => {
+const MapViewComponent = forwardRef(({ threatPins, destination, userLocation }, ref) => {
   const [lineScale, setLineScale] = useState(1);
   const [iosSafeRouteCoords, setIosSafeRouteCoords] = useState([]);
   const [iosAltRouteCoords, setIosAltRouteCoords] = useState([]);
@@ -72,11 +72,11 @@ const MapViewComponent = ({ threatPins, destination, userLocation }) => {
   const toRad = (value) => (value * Math.PI) / 180;
   const routeVector = destination
     ? {
-        x:
-          (destination.longitude - origin.longitude) *
-          Math.cos(toRad((origin.latitude + destination.latitude) / 2)),
-        y: destination.latitude - origin.latitude,
-      }
+      x:
+        (destination.longitude - origin.longitude) *
+        Math.cos(toRad((origin.latitude + destination.latitude) / 2)),
+      y: destination.latitude - origin.latitude,
+    }
     : { x: 0, y: 0 };
 
   const projectionOnRoute = (point) => {
@@ -121,34 +121,15 @@ const MapViewComponent = ({ threatPins, destination, userLocation }) => {
 
   const safeRouteWaypoints = filteredSafeHavens.map((haven) => haven.latlng);
 
-  const screenHeight = Dimensions.get("window").height;
-  const latitudeDelta = 0.03 / lineScale;
-  const metersPerPixel = (latitudeDelta * 111000) / screenHeight;
-
-  const routeStrokeWidth = 4 + Math.round(1.5 * lineScale);
-  const routeDashPattern =
-    Platform.OS === "ios"
-      ? [
-          routeStrokeWidth * metersPerPixel,
-          routeStrokeWidth * 3.5 * metersPerPixel,
-        ]
-      : [0, routeStrokeWidth * 3.5];
-
-  const safeRouteDots = useMemo(() => {
-    if (Platform.OS !== "ios" || iosSafeRouteCoords.length === 0) return [];
-    const gapInMeters = routeStrokeWidth * 3.5 * metersPerPixel;
-    return getDottedCoordinates(iosSafeRouteCoords, gapInMeters);
-  }, [iosSafeRouteCoords, routeStrokeWidth, metersPerPixel]);
-
-  const altRouteDots = useMemo(() => {
-    if (Platform.OS !== "ios" || iosAltRouteCoords.length === 0) return [];
-    const gapInMeters = routeStrokeWidth * 3.5 * metersPerPixel;
-    return getDottedCoordinates(iosAltRouteCoords, gapInMeters);
-  }, [iosAltRouteCoords, routeStrokeWidth, metersPerPixel]);
+  // Base width scaled by zoom level. Size is back to medium.
+  const routeStrokeWidth = Math.max(3, Math.round(5 * lineScale));
+  // Gap between squared dots scales with their size. Multiplier increased to 10 to drastically reduce the amount of dots.
+  const routeDashPattern = Platform.OS === "ios" ? [routeStrokeWidth, routeStrokeWidth * 10] : [0, routeStrokeWidth * 10];
 
   return (
     <View style={styles.container}>
       <MapView
+        ref={ref}
         provider={PROVIDER_GOOGLE}
         style={styles.map}
         customMapStyle={mapStyle}
@@ -183,75 +164,29 @@ const MapViewComponent = ({ threatPins, destination, userLocation }) => {
               destination={destination}
               waypoints={safeRouteWaypoints}
               apikey={GOOGLE_MAPS_API_KEY}
-              strokeWidth={Platform.OS === "ios" ? 0 : routeStrokeWidth}
-              strokeColor={Platform.OS === "ios" ? "transparent" : "#2196F3"}
+              strokeWidth={routeStrokeWidth}
+              strokeColor="#2196F3"
               lineCap="round"
               lineDashPattern={routeDashPattern}
               mode="DRIVING"
               optimizeWaypoints={false}
               zIndex={3}
-              onReady={(result) => {
-                if (Platform.OS === "ios")
-                  setIosSafeRouteCoords(result.coordinates);
-              }}
             />
 
             <MapViewDirections
               origin={origin}
               destination={destination}
               apikey={GOOGLE_MAPS_API_KEY}
-              strokeWidth={Platform.OS === "ios" ? 0 : routeStrokeWidth}
-              strokeColor={Platform.OS === "ios" ? "transparent" : "#888888"}
+              strokeWidth={routeStrokeWidth}
+              strokeColor="#888888"
               lineCap="round"
               lineDashPattern={routeDashPattern}
               mode="DRIVING"
               optimizeWaypoints={false}
               zIndex={2}
-              onReady={(result) => {
-                if (Platform.OS === "ios")
-                  setIosAltRouteCoords(result.coordinates);
-              }}
             />
 
-            {Platform.OS === "ios" &&
-              safeRouteDots.map((dot, index) => (
-                <Marker
-                  key={`safe-dot-${index}`}
-                  coordinate={dot}
-                  anchor={{ x: 0.5, y: 0.5 }}
-                  tracksViewChanges={false}
-                  zIndex={3}
-                >
-                  <View
-                    style={{
-                      width: routeStrokeWidth,
-                      height: routeStrokeWidth,
-                      borderRadius: routeStrokeWidth / 2,
-                      backgroundColor: "#2196F3",
-                    }}
-                  />
-                </Marker>
-              ))}
 
-            {Platform.OS === "ios" &&
-              altRouteDots.map((dot, index) => (
-                <Marker
-                  key={`alt-dot-${index}`}
-                  coordinate={dot}
-                  anchor={{ x: 0.5, y: 0.5 }}
-                  tracksViewChanges={false}
-                  zIndex={2}
-                >
-                  <View
-                    style={{
-                      width: routeStrokeWidth,
-                      height: routeStrokeWidth,
-                      borderRadius: routeStrokeWidth / 2,
-                      backgroundColor: "#888888",
-                    }}
-                  />
-                </Marker>
-              ))}
           </>
         )}
 
@@ -282,7 +217,7 @@ const MapViewComponent = ({ threatPins, destination, userLocation }) => {
       </MapView>
     </View>
   );
-};
+});
 
 const styles = StyleSheet.create({
   container: { ...StyleSheet.absoluteFillObject },
