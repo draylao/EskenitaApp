@@ -1,6 +1,11 @@
 import BottomSheet, { BottomSheetView } from "@gorhom/bottom-sheet";
 import * as Location from "expo-location";
-import { Navigation, ShieldCheck, TriangleAlert, Users } from "lucide-react-native";
+import {
+  Navigation,
+  ShieldCheck,
+  TriangleAlert,
+  Users,
+} from "lucide-react-native";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
@@ -9,9 +14,9 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import GuardianProtectionPanel from "../components/GuardianProtectionPanel";
 import MapViewComponent from "../components/MapViewComponents";
 import NavigationHud from "../components/NavigationHud";
+import RouteComparisonPanel from "../components/RouteComparisonPanel";
 import ThreatReportModal from "../components/ThreatReportModal";
 import UserIconPicker from "../components/UserIconPicker";
-import RouteComparisonPanel from "../components/RouteComparisonPanel";
 import { analyzeThreatWithAI } from "../services/MockVertexAi";
 import { fetchDynamicSafeHavens } from "../services/PlacesServices";
 import { colors } from "../theme/colors";
@@ -32,7 +37,11 @@ const HomeScreen = () => {
   const [isIconPickerVisible, setIsIconPickerVisible] = useState(false);
   const [userIconType, setUserIconType] = useState("circle");
   const [selectedRouteType, setSelectedRouteType] = useState("safe");
-  const [routeStats, setRouteStats] = useState({ safe: null, dangerous: null });
+  const [routeStats, setRouteStats] = useState({
+    safe: null,
+    dangerous: null,
+    safeAlt: null,
+  });
   const [isGuardianSheetOpen, setIsGuardianSheetOpen] = useState(false);
 
   const bottomSheetRef = useRef(null);
@@ -61,7 +70,7 @@ const HomeScreen = () => {
   const handleClearRoute = () => {
     setDestination(null);
     setSelectedRouteType("safe");
-    setRouteStats({ safe: null, dangerous: null });
+    setRouteStats({ safe: null, dangerous: null, safeAlt: null });
     googlePlacesRef.current?.setAddressText("");
   };
 
@@ -73,7 +82,8 @@ const HomeScreen = () => {
       );
       return;
     }
-    setSelectedRouteType("safe");
+    // Updated to freely allow selection between 'safe' and 'safeAlt' variables
+    setSelectedRouteType(routeType);
   };
 
   const handleRouteStatsUpdate = (routeType, stats) => {
@@ -147,9 +157,13 @@ const HomeScreen = () => {
     const a =
       Math.sin(dLat / 2) ** 2 +
       Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2;
-    const distanceToStepEnd = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    const distanceToStepEnd =
+      R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
-    if (distanceToStepEnd < 20 && currentStepIndex < navigationSteps.length - 1) {
+    if (
+      distanceToStepEnd < 20 &&
+      currentStepIndex < navigationSteps.length - 1
+    ) {
       setCurrentStepIndex((prev) => prev + 1);
     }
   }, [userLocation, isNavigating, navigationSteps, currentStepIndex]);
@@ -302,191 +316,222 @@ const HomeScreen = () => {
 
         {/* Minimal Search Bar */}
         {!isNavigating && (
-        <View style={styles.searchContainer}>
-          <View style={styles.searchRowContainer}>
-            <GooglePlacesAutocomplete
-              ref={googlePlacesRef}
-              placeholder={
-                destination ? "Routing to Destination..." : "Search here"
-              }
-              fetchDetails={true} // Crucial to grab the lat/lng details
-              onPress={(data, details = null) => {
-                if (details) {
-                  setDestination({
-                    latitude: details.geometry.location.lat,
-                    longitude: details.geometry.location.lng,
-                  });
-                  setSelectedRouteType("safe");
-                  setRouteStats({ safe: null, dangerous: null });
-                  googlePlacesRef.current?.blur();
+          <View style={styles.searchContainer}>
+            <View style={styles.searchRowContainer}>
+              <GooglePlacesAutocomplete
+                ref={googlePlacesRef}
+                placeholder={
+                  destination ? "Routing to Destination..." : "Search here"
                 }
-              }}
-              onFail={(error) => {
-                console.error("Google Places API Error:", error);
-                // Optional: Alert it to your screen so you see it instantly during development
-                Alert.alert("API Error", error);
-              }}
-              query={{
-                key: GOOGLE_MAPS_API_KEY,
-                language: "en",
-                components: "country:ph",
-                location: `${userLocation.latitude},${userLocation.longitude}`,
-                radius: "10000",
-                strictbounds: true,
-              }}
-              styles={{
-                container: { flex: 1 },
-                textInputContainer: styles.textInputContainer,
-                textInput: styles.textInput,
-                listView: destination ? { display: "none" } : styles.listView,
-                row: styles.searchRow,
-                description: styles.searchDescription,
-              }}
-              enablePoweredByContainer={false}
-            />
-            <TouchableOpacity
-              style={styles.clearBtn}
-              onPress={handleClearRoute}
-            >
-              <Text style={styles.clearText}>✕</Text>
-            </TouchableOpacity>
+                fetchDetails={true} // Crucial to grab the lat/lng details
+                onPress={(data, details = null) => {
+                  if (details) {
+                    setDestination({
+                      latitude: details.geometry.location.lat,
+                      longitude: details.geometry.location.lng,
+                    });
+                    setSelectedRouteType("safe");
+                    setRouteStats({
+                      safe: null,
+                      dangerous: null,
+                      safeAlt: null,
+                    });
+                    googlePlacesRef.current?.blur();
+                  }
+                }}
+                onFail={(error) => {
+                  console.error("Google Places API Error:", error);
+                  Alert.alert("API Error", error);
+                }}
+                query={{
+                  key: GOOGLE_MAPS_API_KEY,
+                  language: "en",
+                  components: "country:ph",
+                  location: `${userLocation.latitude},${userLocation.longitude}`,
+                  radius: "10000",
+                  strictbounds: true,
+                }}
+                styles={{
+                  container: { flex: 1 },
+                  textInputContainer: styles.textInputContainer,
+                  textInput: styles.textInput,
+                  listView: destination ? { display: "none" } : styles.listView,
+                  row: styles.searchRow,
+                  description: styles.searchDescription,
+                }}
+                enablePoweredByContainer={false}
+              />
+              <TouchableOpacity
+                style={styles.clearBtn}
+                onPress={handleClearRoute}
+              >
+                <Text style={styles.clearText}>✕</Text>
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
         )}
 
         {/* Recenter Map Button */}
         {!isNavigating && (
-        <TouchableOpacity
-          style={styles.recenterButton}
-          onPress={handleRecenter}
-        >
-          <Navigation
-            size={24}
-            color="#FFFFFF"
-            fill="#FFFFFF"
-            style={{ marginRight: 2, marginTop: 2 }}
-          />
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.recenterButton}
+            onPress={handleRecenter}
+          >
+            <Navigation
+              size={24}
+              color="#FFFFFF"
+              fill="#FFFFFF"
+              style={{ marginRight: 2, marginTop: 2 }}
+            />
+          </TouchableOpacity>
         )}
 
         {/* Modern Toolbar Component on Bottom Layer */}
         {!isNavigating && (
-        <BottomSheet
-          ref={bottomSheetRef}
-          index={0}
-          snapPoints={snapPoints}
-          backgroundStyle={styles.sheetBackground}
-          handleIndicatorStyle={{ display: "none" }}
-        >
-          <BottomSheetView
-            style={[
-              styles.toolbarContent,
-              { paddingBottom: insets.bottom > 0 ? insets.bottom : 12 },
-            ]}
+          <BottomSheet
+            ref={bottomSheetRef}
+            index={0}
+            snapPoints={snapPoints}
+            backgroundStyle={styles.sheetBackground}
+            handleIndicatorStyle={{ display: "none" }}
           >
-            {/* Navigate Tab */}
-            <TouchableOpacity
-              style={[styles.toolbarItem, activeTab === "navigate" && styles.activeTab]}
-              onPress={() => setActiveTab("navigate")}
+            <BottomSheetView
+              style={[
+                styles.toolbarContent,
+                { paddingBottom: insets.bottom > 0 ? insets.bottom : 12 },
+              ]}
             >
-              <Navigation
-                size={22}
-                color={activeTab === "navigate" ? colors.primary : colors.textSecondary}
-                style={styles.toolbarIcon}
-              />
-              <Text
+              {/* Navigate Tab */}
+              <TouchableOpacity
                 style={[
-                  styles.toolbarLabel,
-                  activeTab === "navigate" && styles.activeTabLabel,
+                  styles.toolbarItem,
+                  activeTab === "navigate" && styles.activeTab,
                 ]}
+                onPress={() => setActiveTab("navigate")}
               >
-                Navigate
-              </Text>
-            </TouchableOpacity>
-
-            {/* Report Tab */}
-            <TouchableOpacity
-              style={[styles.toolbarItem, activeTab === "report" && styles.activeTab]}
-              onPress={() => {
-                setActiveTab("report");
-                setIsModalVisible(true);
-              }}
-            >
-              <TriangleAlert
-                size={22}
-                color={activeTab === "report" ? colors.primary : colors.textSecondary}
-                style={styles.toolbarIcon}
-              />
-              <Text
-                style={[
-                  styles.toolbarLabel,
-                  activeTab === "report" && styles.activeTabLabel,
-                ]}
-              >
-                Report
-              </Text>
-            </TouchableOpacity>
-
-            {/* Guardian Tab */}
-            <TouchableOpacity
-              style={[styles.toolbarItem, activeTab === "guardian" && styles.activeTab]}
-              onPress={() => {
-                setActiveTab("guardian");
-                handleShareGuardian();
-              }}
-            >
-              <Users
-                size={22}
-                color={activeTab === "guardian" ? colors.primary : colors.textSecondary}
-                style={styles.toolbarIcon}
-              />
-              <Text
-                style={[
-                  styles.toolbarLabel,
-                  activeTab === "guardian" && styles.activeTabLabel,
-                ]}
-              >
-                Guardian
-              </Text>
-            </TouchableOpacity>
-
-            {/* Havens Tab */}
-            <TouchableOpacity
-              style={[styles.toolbarItem, activeTab === "havens" && styles.activeTab]}
-              onPress={() => setActiveTab("havens")}
-            >
-              <ShieldCheck
-                size={22}
-                color={activeTab === "havens" ? colors.primary : colors.textSecondary}
-                style={styles.toolbarIcon}
-              />
-              <Text
-                style={[
-                  styles.toolbarLabel,
-                  activeTab === "havens" && styles.activeTabLabel,
-                ]}
-              >
-                Havens
-              </Text>
-            </TouchableOpacity>
-
-            {/* Customize Icon Button */}
-            <TouchableOpacity
-              style={styles.toolbarItem}
-              onPress={() => setIsIconPickerVisible(true)}
-            >
-              <View style={styles.customizeIconPreview}>
-                <View
-                  style={[
-                    styles.customizeIconDot,
-                    userIconType === "triangle" && styles.trianglePreview,
-                  ]}
+                <Navigation
+                  size={22}
+                  color={
+                    activeTab === "navigate"
+                      ? colors.primary
+                      : colors.textSecondary
+                  }
+                  style={styles.toolbarIcon}
                 />
-              </View>
-              <Text style={styles.toolbarLabel}>Icon</Text>
-            </TouchableOpacity>
-          </BottomSheetView>
-        </BottomSheet>
+                <Text
+                  style={[
+                    styles.toolbarLabel,
+                    activeTab === "navigate" && styles.activeTabLabel,
+                  ]}
+                >
+                  Navigate
+                </Text>
+              </TouchableOpacity>
+
+              {/* Report Tab */}
+              <TouchableOpacity
+                style={[
+                  styles.toolbarItem,
+                  activeTab === "report" && styles.activeTab,
+                ]}
+                onPress={() => {
+                  setActiveTab("report");
+                  setIsModalVisible(true);
+                }}
+              >
+                <TriangleAlert
+                  size={22}
+                  color={
+                    activeTab === "report"
+                      ? colors.primary
+                      : colors.textSecondary
+                  }
+                  style={styles.toolbarIcon}
+                />
+                <Text
+                  style={[
+                    styles.toolbarLabel,
+                    activeTab === "report" && styles.activeTabLabel,
+                  ]}
+                >
+                  Report
+                </Text>
+              </TouchableOpacity>
+
+              {/* Guardian Tab */}
+              <TouchableOpacity
+                style={[
+                  styles.toolbarItem,
+                  activeTab === "guardian" && styles.activeTab,
+                ]}
+                onPress={() => {
+                  setActiveTab("guardian");
+                  handleShareGuardian();
+                }}
+              >
+                <Users
+                  size={22}
+                  color={
+                    activeTab === "guardian"
+                      ? colors.primary
+                      : colors.textSecondary
+                  }
+                  style={styles.toolbarIcon}
+                />
+                <Text
+                  style={[
+                    styles.toolbarLabel,
+                    activeTab === "guardian" && styles.activeTabLabel,
+                  ]}
+                >
+                  Guardian
+                </Text>
+              </TouchableOpacity>
+
+              {/* Havens Tab */}
+              <TouchableOpacity
+                style={[
+                  styles.toolbarItem,
+                  activeTab === "havens" && styles.activeTab,
+                ]}
+                onPress={() => setActiveTab("havens")}
+              >
+                <ShieldCheck
+                  size={22}
+                  color={
+                    activeTab === "havens"
+                      ? colors.primary
+                      : colors.textSecondary
+                  }
+                  style={styles.toolbarIcon}
+                />
+                <Text
+                  style={[
+                    styles.toolbarLabel,
+                    activeTab === "havens" && styles.activeTabLabel,
+                  ]}
+                >
+                  Havens
+                </Text>
+              </TouchableOpacity>
+
+              {/* Customize Icon Button */}
+              <TouchableOpacity
+                style={styles.toolbarItem}
+                onPress={() => setIsIconPickerVisible(true)}
+              >
+                <View style={styles.customizeIconPreview}>
+                  <View
+                    style={[
+                      styles.customizeIconDot,
+                      userIconType === "triangle" && styles.trianglePreview,
+                    ]}
+                  />
+                </View>
+                <Text style={styles.toolbarLabel}>Icon</Text>
+              </TouchableOpacity>
+            </BottomSheetView>
+          </BottomSheet>
         )}
 
         <ThreatReportModal
@@ -568,7 +613,11 @@ const HomeScreen = () => {
             onSelectRoute={handleSelectRoute}
             onStartNavigation={handleStartNavigation}
             routeStats={routeStats}
-            viaSummary="Safe havens & protected areas"
+            viaSummary={
+              selectedRouteType === "safeAlt"
+                ? "Alternative safe havens"
+                : "Safe havens & protected areas"
+            }
           />
         )}
       </View>
@@ -579,8 +628,6 @@ const HomeScreen = () => {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   sosBackground: { backgroundColor: "rgba(255,0,0,0.4)" },
-
-  // Updated Dynamic Autocomplete Layout
   searchContainer: {
     position: "absolute",
     top: 60,
@@ -619,7 +666,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   listView: {
-    position: "absolute", // CRITICAL: Makes the list float instead of expanding the row container
+    position: "absolute",
     top: 55,
     left: 0,
     right: 0,
@@ -658,8 +705,6 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   clearText: { color: colors.textPrimary, fontWeight: "600" },
-
-  // Bottom Icon Toolbar Styles
   sheetBackground: {
     backgroundColor: colors.card,
     borderTopLeftRadius: 24,
