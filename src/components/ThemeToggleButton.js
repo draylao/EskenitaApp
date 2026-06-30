@@ -10,7 +10,10 @@ export const ThemeToggleButton = ({ style }) => {
     <TouchableOpacity
       style={[
         styles.button,
-        { backgroundColor: colors.surface, borderColor: colors.border },
+        {
+          backgroundColor: isDarkMode ? colors.surface : colors.neonOrange,
+          borderColor: isDarkMode ? colors.border : colors.neonOrange,
+        },
         style,
       ]}
       onPress={toggleTheme}
@@ -18,7 +21,7 @@ export const ThemeToggleButton = ({ style }) => {
       <Ionicons
         name={isDarkMode ? "sunny" : "moon"}
         size={24}
-        color={colors.primary}
+        color="#FFFFFF"
       />
     </TouchableOpacity>
   );

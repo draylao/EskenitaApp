@@ -25,7 +25,7 @@ import { useTheme } from "../theme/ThemeContext";
 const GOOGLE_MAPS_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
 
 const HomeScreen = () => {
-  const { colors } = useTheme();
+  const { colors, isDarkMode } = useTheme();
   const styles = createStyles(colors);
   const [threatPins, setThreatPins] = useState([]);
   const [destination, setDestination] = useState(null);
@@ -383,7 +383,13 @@ const HomeScreen = () => {
         {/* Recenter Map Button */}
         {!isNavigating && (
           <TouchableOpacity
-            style={styles.recenterButton}
+            style={[
+              styles.recenterButton,
+              {
+                backgroundColor: isDarkMode ? colors.card : colors.neonOrange,
+                borderColor: isDarkMode ? colors.border : colors.neonOrange,
+              },
+            ]}
             onPress={handleRecenter}
           >
             <Navigation
@@ -474,8 +480,14 @@ const HomeScreen = () => {
                   activeTab === "guardian" && styles.activeTab,
                 ]}
                 onPress={() => {
-                  setActiveTab("guardian");
-                  handleShareGuardian();
+                  if (activeTab === "guardian") {
+                    // If guardian is already active, close it on second tap
+                    setActiveTab("navigate");
+                    setIsGuardianActive(false);
+                  } else {
+                    setActiveTab("guardian");
+                    handleShareGuardian();
+                  }
                 }}
               >
                 <Users
@@ -791,7 +803,7 @@ const createStyles = (colors) =>
     },
     themeToggleButton: {
       position: "absolute",
-      bottom: 330,
+      bottom: 340,
       right: 16,
       zIndex: 10,
     },
