@@ -1,6 +1,18 @@
-import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { ChevronDown, Lock, ShieldCheck, TimerReset } from "lucide-react-native";
+import {
+  ChevronDown,
+  Lock,
+  ShieldCheck,
+  TimerReset,
+} from "lucide-react-native";
 import { useState } from "react";
+import {
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { colors } from "../theme/colors";
 
 const formatDuration = (minutes) => {
@@ -25,12 +37,12 @@ const RouteComparisonPanel = ({
   routeStats = {},
   viaSummary = "Via safe havens",
   guardianStatus = null,
-  // guardianStatus shape: { type: "guardian" | "deadzone", onCancel, timeLeft }
 }) => {
   const [viewMode, setViewMode] = useState("map");
 
   if (!visible) return null;
 
+  // Added Alternative Safe Route definition to the routes map
   const routes = [
     {
       id: "safe",
@@ -38,6 +50,13 @@ const RouteComparisonPanel = ({
       color: colors.neonGreen,
       selectable: true,
       stats: routeStats.safe,
+    },
+    {
+      id: "safeAlt",
+      label: "Alt Safe Route",
+      color: "#17A2B8", // Cyan indicator color
+      selectable: true,
+      stats: routeStats.safeAlt,
     },
     {
       id: "dangerous",
@@ -52,7 +71,7 @@ const RouteComparisonPanel = ({
     if (!route.selectable) {
       Alert.alert(
         "Route Blocked",
-        "This route passes through danger zones and is not available. Please use the safe route.",
+        "This route passes through danger zones and is not available. Please use a safe route.",
         [{ text: "OK" }],
       );
       return;
@@ -61,10 +80,11 @@ const RouteComparisonPanel = ({
   };
 
   const handleStart = () => {
-    if (selectedRoute !== "safe") {
+    // Allows either safe route choice to proceed forward seamlessly
+    if (selectedRoute !== "safe" && selectedRoute !== "safeAlt") {
       Alert.alert(
         "Safe Route Required",
-        "Only the safe route can be used for navigation.",
+        "Only a safe route can be used for navigation.",
         [{ text: "OK", onPress: () => onSelectRoute("safe") }],
       );
       return;
@@ -98,7 +118,10 @@ const RouteComparisonPanel = ({
               : "Digital Kasama Active"}
           </Text>
           {guardianStatus.onCancel && (
-            <TouchableOpacity onPress={guardianStatus.onCancel} style={styles.statusCancelBtn}>
+            <TouchableOpacity
+              onPress={guardianStatus.onCancel}
+              style={styles.statusCancelBtn}
+            >
               <Text style={styles.statusCancelText}>
                 {guardianStatus.type === "deadzone" ? "I'm Safe" : "Stop"}
               </Text>
@@ -112,7 +135,12 @@ const RouteComparisonPanel = ({
           style={[styles.tab, viewMode === "list" && styles.tabActive]}
           onPress={() => setViewMode("list")}
         >
-          <Text style={[styles.tabText, viewMode === "list" && styles.tabTextActive]}>
+          <Text
+            style={[
+              styles.tabText,
+              viewMode === "list" && styles.tabTextActive,
+            ]}
+          >
             List
           </Text>
         </TouchableOpacity>
@@ -120,7 +148,9 @@ const RouteComparisonPanel = ({
           style={[styles.tab, viewMode === "map" && styles.tabActive]}
           onPress={() => setViewMode("map")}
         >
-          <Text style={[styles.tabText, viewMode === "map" && styles.tabTextActive]}>
+          <Text
+            style={[styles.tabText, viewMode === "map" && styles.tabTextActive]}
+          >
             Map
           </Text>
         </TouchableOpacity>
@@ -143,7 +173,12 @@ const RouteComparisonPanel = ({
                 onPress={() => handleRoutePress(route)}
                 activeOpacity={isBlocked ? 1 : 0.7}
               >
-                <View style={[styles.listIndicator, { backgroundColor: route.color }]} />
+                <View
+                  style={[
+                    styles.listIndicator,
+                    { backgroundColor: route.color },
+                  ]}
+                />
                 <View style={styles.listItemContent}>
                   <View style={styles.listItemHeader}>
                     <Text
@@ -155,7 +190,10 @@ const RouteComparisonPanel = ({
                       {route.label}
                     </Text>
                     {isBlocked && (
-                      <Lock size={14} color={isSelected ? colors.textSecondary : "#FFFFFF"} />
+                      <Lock
+                        size={14}
+                        color={isSelected ? colors.textSecondary : "#FFFFFF"}
+                      />
                     )}
                   </View>
                   <Text
@@ -164,7 +202,8 @@ const RouteComparisonPanel = ({
                       !isSelected && styles.listItemStatsUnselected,
                     ]}
                   >
-                    {formatDuration(route.stats?.duration)} · {formatDistance(route.stats?.distance)}
+                    {formatDuration(route.stats?.duration)} ·{" "}
+                    {formatDistance(route.stats?.distance)}
                   </Text>
                   {isBlocked && (
                     <Text
@@ -227,7 +266,12 @@ const RouteComparisonPanel = ({
                     {formatDistance(route.stats?.distance)}
                   </Text>
                   {isSelected && (
-                    <View style={[styles.selectedIndicator, { backgroundColor: route.color }]}>
+                    <View
+                      style={[
+                        styles.selectedIndicator,
+                        { backgroundColor: route.color },
+                      ]}
+                    >
                       <ChevronDown size={14} color="#FFFFFF" />
                     </View>
                   )}
@@ -242,7 +286,11 @@ const RouteComparisonPanel = ({
         <Text style={styles.viaText} numberOfLines={1}>
           Vía: {viaSummary}
         </Text>
-        <ShieldCheck size={16} color={colors.primary} style={{ marginLeft: 8 }} />
+        <ShieldCheck
+          size={16}
+          color={colors.primary}
+          style={{ marginLeft: 8 }}
+        />
       </View>
 
       <TouchableOpacity style={styles.goButton} onPress={handleStart}>
