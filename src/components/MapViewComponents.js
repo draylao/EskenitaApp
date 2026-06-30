@@ -1,5 +1,5 @@
 import React, { forwardRef, useEffect, useMemo, useState } from "react";
-import { Platform, StyleSheet, Text, View } from "react-native";
+import { Image, Platform, StyleSheet, Text, View } from "react-native";
 import MapView, { Marker, PROVIDER_GOOGLE } from "react-native-maps";
 import MapViewDirections from "react-native-maps-directions";
 import Svg, { Defs, Path, RadialGradient, Stop } from "react-native-svg";
@@ -8,6 +8,29 @@ import CustomMarker from "./CustomMarker";
 import MarkerDetailModal from "./MarkerDetailModal";
 
 const GOOGLE_MAPS_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
+
+const getUserIconImage = (iconType) => {
+  switch (iconType) {
+    case "triangle":
+      return require("../../assets/user-icons/triangle-icon.png");
+    default:
+      return null;
+  }
+};
+
+const getOffsetCenter = (location, heading, distance = 0.00045) => {
+  const rad = ((heading || 0) * Math.PI) / 180;
+
+  return {
+    latitude:
+      location.latitude - distance * Math.cos(rad),
+
+    longitude:
+      location.longitude -
+      (distance * Math.sin(rad)) /
+        Math.cos((location.latitude * Math.PI) / 180),
+  };
+};
 
 const getDistance = (coord1, coord2) => {
   const R = 6371e3; // metres
@@ -61,6 +84,8 @@ const MapViewComponent = forwardRef(
       onRouteStatsUpdate,
       isNavigating = false,
       onRouteStepsUpdate,
+      isSelectingDestination = false,
+      onMapPress,
     },
     ref,
   ) => {
@@ -70,6 +95,7 @@ const MapViewComponent = forwardRef(
     const [selectedMarker, setSelectedMarker] = useState(null);
     const [isMarkerModalVisible, setIsMarkerModalVisible] = useState(false);
     const [mapRegion, setMapRegion] = useState(null);
+    const [zoomLevel, setZoomLevel] = useState(15);
     const origin = userLocation || { latitude: 15.4828, longitude: 120.9749 }; // Near NEUST
 
     const toRad = (value) => (value * Math.PI) / 180;
@@ -183,7 +209,7 @@ const MapViewComponent = forwardRef(
             center: origin,
             pitch: 70,
             heading: userHeading || 0,
-            zoom: 19.5,
+            zoom: 25.5,
           },
           { duration: 600 },
         );
@@ -207,6 +233,15 @@ const MapViewComponent = forwardRef(
             const newScale = 0.03 / region.latitudeDelta;
             setLineScale(Math.min(Math.max(newScale, 0.5), 3));
             setMapRegion(region);
+            // Calculate approximate zoom level from latitudeDelta
+            const zoom = Math.log2(360 / region.latitudeDelta);
+            setZoomLevel(zoom);
+          }}
+          onPress={(event) => {
+            if (isSelectingDestination && onMapPress) {
+              const coordinate = event.nativeEvent.coordinate;
+              onMapPress(coordinate);
+            }
           }}
         >
           {/* User Location Marker */}
@@ -241,26 +276,17 @@ const MapViewComponent = forwardRef(
                   />
                 </Svg>
               </View>
-              {userIconType === "circle" && (
+              {userIconType === "circle" ? (
                 <View style={styles.userLocationDot} />
-              )}
-              {userIconType === "triangle" && (
-                <View
+              ) : (
+                <Image
+                  source={getUserIconImage(userIconType)}
                   style={[
-                    styles.triangleIcon,
+                    styles.userIconImage,
                     { transform: [{ rotate: `${userHeading || 0}deg` }] },
                   ]}
-                >
-                  <Svg height="24" width="24">
-                    <Path
-                      d="M 12,2 L 22,20 L 2,20 Z"
-                      fill="#00CED1"
-                      stroke="#FFFFFF"
-                      strokeWidth="2"
-                      strokeLinejoin="round"
-                    />
-                  </Svg>
-                </View>
+                  resizeMode="contain"
+                />
               )}
             </View>
           </Marker>
@@ -270,6 +296,9 @@ const MapViewComponent = forwardRef(
               <Marker
                 coordinate={destination}
                 title="Destination"
+                anchor={{ x: 0.5, y: 1 }}
+                flat={true}
+                zIndex={2}
                 onPress={() => {
                   setSelectedMarker({
                     type: "destination",
@@ -296,10 +325,14 @@ const MapViewComponent = forwardRef(
                 optimizeWaypoints={false}
                 zIndex={selectedRouteType === "dangerous" ? 4 : 2}
                 onReady={(result) => {
+                  console.log("Dangerous route ready:", result);
                   onRouteStatsUpdate?.("dangerous", {
                     duration: result.duration,
                     distance: result.distance,
                   });
+                }}
+                onError={(error) => {
+                  console.error("Dangerous route error:", error);
                 }}
               />
 
@@ -310,18 +343,22 @@ const MapViewComponent = forwardRef(
                 waypoints={balancedSafeWaypoints}
                 apikey={GOOGLE_MAPS_API_KEY}
                 strokeWidth={selectedRouteType === "safe" ? routeStrokeWidth + 3 : routeStrokeWidth}
-                strokeColor={selectedRouteType === "safe" ? "#28A745" : "rgba(40, 167, 69, 0.45)"}
+                strokeColor={selectedRouteType === "safe" ? "#28A745": "rgba(40,167,69,.25)"}
                 lineCap="round"
                 lineDashPattern={[0, 0]}
                 mode="WALKING"
                 optimizeWaypoints={false}
                 zIndex={selectedRouteType === "safe" ? 5 : 3}
                 onReady={(result) => {
+                  console.log("Safe route ready:", result);
                   onRouteStatsUpdate?.("safe", {
                     duration: result.duration,
                     distance: result.distance,
                   });
                   onRouteStepsUpdate?.(result.legs?.[0]?.steps || []);
+                }}
+                onError={(error) => {
+                  console.error("Safe route error:", error);
                 }}
               />
             </>
@@ -333,6 +370,9 @@ const MapViewComponent = forwardRef(
               key={haven.id}
               coordinate={haven.latlng}
               title={haven.title}
+              anchor={{ x: 0.5, y: 1 }}
+              flat={true}
+              zIndex={1}
               onPress={() => {
                 setSelectedMarker({
                   type: "haven",
@@ -349,25 +389,38 @@ const MapViewComponent = forwardRef(
           ))}
 
           {/* Render threat pins */}
-          {threatPins.map((threat, index) => (
-            <Marker
-              key={index}
-              coordinate={threat.coordinates}
-              title={threat.message}
-              onPress={() => {
-                setSelectedMarker({
-                  type: "threat",
-                  title: threat.message,
-                  color: "#FF3131",
-                  severity: threat.severity,
-                  description: "Reported threat location",
-                });
-                setIsMarkerModalVisible(true);
-              }}
-            >
-              <CustomMarker type="threat" title={threat.message} />
-            </Marker>
-          ))}
+          {threatPins.map((threat) => {
+            if (!threat.location || !threat.location.latitude || !threat.location.longitude) {
+              return null;
+            }
+            return (
+              <Marker
+                key={threat.id}
+                coordinate={threat.location}
+                title={threat.category}
+                description={threat.description}
+                anchor={{ x: 0.5, y: 1 }}
+                flat={true}
+                zIndex={3}
+                onPress={() => {
+                  setSelectedMarker({
+                    type: "threat",
+                    title: threat.category,
+                    color: "#FF3131",
+                    severity: threat.severity,
+                    description: threat.description,
+                  });
+
+                  setIsMarkerModalVisible(true);
+                }}
+              >
+                <CustomMarker
+                  type="threat"
+                  title={threat.category}
+                />
+              </Marker>
+            );
+          })}
         </MapView>
 
         <MarkerDetailModal
@@ -415,16 +468,9 @@ const styles = StyleSheet.create({
     elevation: 4,
     zIndex: 2,
   },
-  triangleIcon: {
-    width: 24,
-    height: 24,
-    justifyContent: "center",
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 3,
-    elevation: 4,
+  userIconImage: {
+    width: 64,
+    height: 64,
     zIndex: 2,
   },
   customMarker: {

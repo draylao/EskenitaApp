@@ -1,32 +1,19 @@
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import {
-  ArrowUp,
-  ArrowUpLeft,
-  ArrowUpRight,
-  CornerDownLeft,
-  CornerDownRight,
-  CornerUpLeft,
-  CornerUpRight,
-  RotateCcw,
-  X,
-} from "lucide-react-native";
+import { StyleSheet, Text, TouchableOpacity, View, Image } from "react-native";
+import { X } from "lucide-react-native";
 import { colors } from "../theme/colors";
+import Straight from "../../assets/images/direction arrow/Straight.png";
+import Left from "../../assets/images/direction arrow/Turn Left.png";
+import Right from "../../assets/images/direction arrow/Turn Right.png";
 
 const MANEUVER_ICON_MAP = {
-  "turn-left": CornerUpLeft,
-  "turn-right": CornerUpRight,
-  "turn-sharp-left": CornerUpLeft,
-  "turn-sharp-right": CornerUpRight,
-  "turn-slight-left": ArrowUpLeft,
-  "turn-slight-right": ArrowUpRight,
-  "uturn-left": RotateCcw,
-  "uturn-right": RotateCcw,
-  "roundabout-left": CornerDownLeft,
-  "roundabout-right": CornerDownRight,
-  straight: ArrowUp,
+  
+  "turn-left": Left,
+  "turn-right": Right,
+  "defaultIcon": Straight,
+  straight: Straight,
 };
 
-const getManeuverIcon = (maneuver) => MANEUVER_ICON_MAP[maneuver] || ArrowUp;
+const getManeuverIcon = (maneuver) => MANEUVER_ICON_MAP[maneuver] || Straight;
 
 const stripHtml = (html = "") => html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
 
@@ -60,8 +47,8 @@ const NavigationHud = ({
 }) => {
   if (!visible) return null;
 
-  const ManeuverIcon = getManeuverIcon(currentStep?.maneuver);
   const instruction = stripHtml(currentStep?.html_instructions) || "Continue straight";
+  const maneuverIcon = getManeuverIcon(currentStep?.maneuver);
 
   return (
     <>
@@ -70,7 +57,14 @@ const NavigationHud = ({
           <X size={18} color="#FFFFFF" />
         </TouchableOpacity>
         <View style={styles.maneuverIconWrap}>
-          <ManeuverIcon size={30} color="#FFFFFF" strokeWidth={2.5} />
+          <Image
+            source={maneuverIcon}
+            style={{
+              width: 70,
+              height: 70,
+            }}
+            resizeMode="contain"
+          />
         </View>
         <View style={styles.instructionTextWrap}>
           <Text style={styles.distanceText}>
@@ -90,11 +84,6 @@ const NavigationHud = ({
           </Text>
         </View>
       )}
-
-      <View style={styles.speedPill}>
-        <Text style={styles.speedValue}>{Math.round(speedKmh)}</Text>
-        <Text style={styles.speedUnit}>km/h</Text>
-      </View>
 
       <View style={styles.bottomBar}>
         <View style={styles.etaRow}>
@@ -154,7 +143,6 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 14,
-    backgroundColor: colors.primary,
     alignItems: "center",
     justifyContent: "center",
   },

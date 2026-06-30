@@ -2,7 +2,7 @@ import BottomSheet, { BottomSheetView } from "@gorhom/bottom-sheet";
 import * as Location from "expo-location";
 import { Navigation, ShieldCheck, TriangleAlert, Users } from "lucide-react-native";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Alert, Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { GooglePlacesAutocomplete } from "react-native-google-places-autocomplete";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -12,6 +12,7 @@ import NavigationHud from "../components/NavigationHud";
 import ThreatReportModal from "../components/ThreatReportModal";
 import UserIconPicker from "../components/UserIconPicker";
 import RouteComparisonPanel from "../components/RouteComparisonPanel";
+import HavenSelectorModal from "../components/HavenSelectorModal";
 import { analyzeThreatWithAI } from "../services/MockVertexAi";
 import { fetchDynamicSafeHavens } from "../services/PlacesServices";
 import { colors } from "../theme/colors";
@@ -20,7 +21,7 @@ const GOOGLE_MAPS_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
 
 const HomeScreen = () => {
   const [threatPins, setThreatPins] = useState([]);
-  const [destination, setDestination] = useState(null);
+  const [destination, setDestination] = useState({ latitude: 15.4716, longitude: 120.9822 });
   const [dynamicSafeHavens, setDynamicSafeHavens] = useState([]);
 
   const [isGuardianActive, setIsGuardianActive] = useState(false);
@@ -34,7 +35,9 @@ const HomeScreen = () => {
   const [selectedRouteType, setSelectedRouteType] = useState("safe");
   const [routeStats, setRouteStats] = useState({ safe: null, dangerous: null });
   const [isGuardianSheetOpen, setIsGuardianSheetOpen] = useState(false);
-
+  const [isHavenSelectorVisible, setIsHavenSelectorVisible] = useState(false);
+  const [isSelectingDestination, setIsSelectingDestination] = useState(false);
+  
   const bottomSheetRef = useRef(null);
   const mapRef = useRef(null);
   const insets = useSafeAreaInsets();
@@ -95,9 +98,22 @@ const HomeScreen = () => {
     setIsGuardianActive(true);
   };
 
-  const handleReportThreat = async (description) => {
-    const aiResult = await analyzeThreatWithAI(description);
-    setThreatPins((prev) => [...prev, aiResult]);
+  const handleReportThreat = async (report) => {
+    const aiResult = await analyzeThreatWithAI(report.description);
+
+    const newThreat = {
+      id: Date.now().toString(),
+      category: report.category,
+      severity: report.severity,
+      description: report.description,
+      location: report.location || userLocation,
+      locationLabel: report.locationLabel,
+      reportedAt: report.reportedAt,
+      ai: aiResult,
+    };
+
+    setThreatPins((prev) => [...prev, newThreat]);
+
     setIsModalVisible(false);
   };
 
@@ -298,6 +314,15 @@ const HomeScreen = () => {
           onRouteStatsUpdate={handleRouteStatsUpdate}
           isNavigating={isNavigating}
           onRouteStepsUpdate={setNavigationSteps}
+          isSelectingDestination={isSelectingDestination}
+          onMapPress={(coordinate) => {
+            if (isSelectingDestination) {
+              setDestination(coordinate);
+              setIsSelectingDestination(false);
+              setSelectedRouteType("safe");
+              setRouteStats({ safe: null, dangerous: null });
+            }
+          }}
         />
 
         {/* Minimal Search Bar */}
@@ -365,6 +390,20 @@ const HomeScreen = () => {
             color="#FFFFFF"
             fill="#FFFFFF"
             style={{ marginRight: 2, marginTop: 2 }}
+          />
+        </TouchableOpacity>
+        )}
+
+        {/* Select Destination Button */}
+        {!isNavigating && (
+        <TouchableOpacity
+          style={[styles.recenterButton, styles.selectDestinationButton, isSelectingDestination && styles.selectDestinationActive]}
+          onPress={() => setIsSelectingDestination(!isSelectingDestination)}
+        >
+          <Image
+            source={require("../../assets/markers/destination-marker.png")}
+            style={styles.destinationButtonIcon}
+            resizeMode="contain"
           />
         </TouchableOpacity>
         )}
@@ -453,7 +492,10 @@ const HomeScreen = () => {
             {/* Havens Tab */}
             <TouchableOpacity
               style={[styles.toolbarItem, activeTab === "havens" && styles.activeTab]}
-              onPress={() => setActiveTab("havens")}
+              onPress={() => {
+                setActiveTab("havens");
+                setIsHavenSelectorVisible(true);
+              }}
             >
               <ShieldCheck
                 size={22}
@@ -476,12 +518,15 @@ const HomeScreen = () => {
               onPress={() => setIsIconPickerVisible(true)}
             >
               <View style={styles.customizeIconPreview}>
-                <View
-                  style={[
-                    styles.customizeIconDot,
-                    userIconType === "triangle" && styles.trianglePreview,
-                  ]}
-                />
+                {userIconType === "circle" ? (
+                  <View style={styles.customizeIconDot} />
+                ) : (
+                  <Image
+                    source={require("../../assets/user-icons/triangle-icon.png")}
+                    style={styles.customizeIconImage}
+                    resizeMode="contain"
+                  />
+                )}
               </View>
               <Text style={styles.toolbarLabel}>Icon</Text>
             </TouchableOpacity>
@@ -490,9 +535,11 @@ const HomeScreen = () => {
         )}
 
         <ThreatReportModal
-          visible={isModalVisible}
-          onClose={() => setIsModalVisible(false)}
-          onSubmit={handleReportThreat}
+            visible={isModalVisible}
+            onClose={() => setIsModalVisible(false)}
+            userLocation={userLocation}
+            locationLabel="Current Location"
+            onSubmit={handleReportThreat}
         />
 
         <UserIconPicker
@@ -500,6 +547,17 @@ const HomeScreen = () => {
           onClose={() => setIsIconPickerVisible(false)}
           onSelect={(iconType) => setUserIconType(iconType)}
           currentIcon={userIconType}
+        />
+
+        <HavenSelectorModal
+          visible={isHavenSelectorVisible}
+          onClose={() => setIsHavenSelectorVisible(false)}
+          havens={dynamicSafeHavens}
+          userLocation={userLocation}
+          onSelectHaven={(haven) => {
+            setDestination(haven.latlng);
+            setSelectedRouteType("safe");
+          }}
         />
 
         {isNavigating && (
@@ -717,22 +775,9 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     backgroundColor: colors.primary,
   },
-  trianglePreview: {
-    borderRadius: 0,
-    width: 0,
-    height: 0,
-    backgroundColor: "transparent",
-    borderLeftWidth: 8,
-    borderRightWidth: 8,
-    borderBottomWidth: 14,
-    borderLeftColor: "transparent",
-    borderRightColor: "transparent",
-    borderBottomColor: "#00CED1",
-  },
-  diamondPreview: {
-    borderRadius: 0,
-    transform: [{ rotate: "45deg" }],
-    backgroundColor: "#FF6B6B",
+  customizeIconImage: {
+    width: 20,
+    height: 20,
   },
   recenterButton: {
     position: "absolute",
@@ -752,6 +797,17 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 6,
     zIndex: 10,
+  },
+  selectDestinationButton: {
+    bottom: 215,
+  },
+  selectDestinationActive: {
+    backgroundColor: "#FF7A1A",
+    borderColor: "#FF7A1A",
+  },
+  destinationButtonIcon: {
+    width: 32,
+    height: 32,
   },
   guardianFab: {
     position: "absolute",

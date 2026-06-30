@@ -1,9 +1,23 @@
-import { Modal, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Image, Modal, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { colors } from "../theme/colors";
 
+const palette = {
+  overlay: "rgba(0, 0, 0, 0.6)",
+  sheetBg: "#0F1115",
+  cardBg: "#1A1D24",
+  cardBorder: "#2A2E37",
+  selectedBorder: "#FF7A1A",
+  chipBg: "#15171D",
+  chipBorder: "#272B33",
+  accent: "#FF7A1A",
+  textPrimary: "#F5F6F8",
+  textSecondary: "#A7ACB5",
+  textMuted: "#6E727B",
+};
+
 const ICON_OPTIONS = [
-  { id: "circle", label: "Circle", color: "#1A73E8" },
-  { id: "triangle", label: "Triangle", color: "#00CED1" },
+  { id: "circle", label: "Circle" },
+  { id: "triangle", label: "Triangle", image: require("../../assets/user-icons/triangle-icon.png") },
 ];
 
 const UserIconPicker = ({ visible, onClose, onSelect, currentIcon }) => {
@@ -21,16 +35,25 @@ const UserIconPicker = ({ visible, onClose, onSelect, currentIcon }) => {
                   currentIcon === option.id && styles.selectedIcon,
                 ]}
                 onPress={() => onSelect(option.id)}
+                activeOpacity={0.85}
               >
-                <View
-                  style={[
-                    styles.iconPreview,
-                    { backgroundColor: option.color },
-                    option.id === "triangle" && styles.triangleIcon,
-                    option.id === "diamond" && styles.diamondIcon,
-                    option.id === "star" && styles.starIcon,
-                  ]}
-                />
+                {option.id === "circle" ? (
+                  <View
+                    style={[
+                      styles.circlePreview,
+                      currentIcon === option.id && styles.selectedIconPreview,
+                    ]}
+                  />
+                ) : (
+                  <Image
+                    source={option.image}
+                    style={[
+                      styles.iconPreview,
+                      currentIcon === option.id && styles.selectedIconPreview,
+                    ]}
+                    resizeMode="contain"
+                  />
+                )}
                 <Text
                   style={[
                     styles.iconLabel,
@@ -54,80 +77,75 @@ const UserIconPicker = ({ visible, onClose, onSelect, currentIcon }) => {
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.3)",
+    backgroundColor: palette.overlay,
     justifyContent: "center",
     padding: 20,
   },
-  container: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 20,
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 20,
-    elevation: 8,
-  },
   title: {
-    color: colors.textPrimary,
+    color: palette.textPrimary,
     fontSize: 20,
     fontWeight: "700",
-    marginBottom: 20,
+    marginBottom: 24,
     textAlign: "center",
   },
   iconGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "center",
-    gap: 15,
-    marginBottom: 20,
+    gap: 16,
+    marginBottom: 24,
   },
   iconOption: {
     alignItems: "center",
-    padding: 10,
-    borderRadius: 12,
-    width: 80,
+    padding: 16,
+    borderRadius: 16,
+    width: 110,
+    backgroundColor: palette.cardBg,
+    borderWidth: 1.5,
+    borderColor: palette.cardBorder,
   },
   selectedIcon: {
-    backgroundColor: "rgba(99, 102, 241, 0.1)",
+    backgroundColor: palette.chipBg,
     borderWidth: 2,
-    borderColor: colors.primary,
+    borderColor: palette.selectedBorder,
   },
   iconPreview: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 50,
+    height: 50,
+  },
+  circlePreview: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: palette.accent,
+    borderWidth: 2,
+    borderColor: "#FFFFFF",
     marginBottom: 8,
   },
-  triangleIcon: {
-    borderRadius: 0,
-    width: 0,
-    height: 0,
-    backgroundColor: "transparent",
-    borderLeftWidth: 20,
-    borderRightWidth: 20,
-    borderBottomWidth: 35,
-    borderLeftColor: "transparent",
-    borderRightColor: "transparent",
-    borderBottomColor: "#00CED1",
+  selectedIconPreview: {
+    tintColor: palette.accent,
   },
   iconLabel: {
-    color: colors.textSecondary,
-    fontSize: 12,
+    color: palette.textSecondary,
+    fontSize: 13,
     fontWeight: "500",
   },
   selectedLabel: {
-    color: colors.primary,
+    color: palette.accent,
     fontWeight: "600",
   },
   closeBtn: {
-    backgroundColor: colors.surface,
-    padding: 12,
-    borderRadius: 8,
+    backgroundColor: palette.cardBg,
+    padding: 14,
+    borderRadius: 12,
     alignItems: "center",
+    borderWidth: 1.5,
+    borderColor: palette.cardBorder,
   },
   closeText: {
-    color: colors.textPrimary,
+    color: palette.textPrimary,
     fontWeight: "600",
+    fontSize: 15,
   },
 });
 
