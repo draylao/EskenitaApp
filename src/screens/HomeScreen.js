@@ -363,6 +363,12 @@ const HomeScreen = () => {
                   row: styles.searchRow,
                   description: styles.searchDescription,
                 }}
+                textInputProps={{
+                  multiline: false,
+                  scrollEnabled: false,
+                  numberOfLines: 1,
+                  allowFontScaling: false,
+                }}
                 enablePoweredByContainer={false}
               />
               <TouchableOpacity
@@ -674,12 +680,13 @@ const createStyles = (colors) =>
     },
     textInput: {
       backgroundColor: colors.card,
-      height: 48,
+      height: 44,
       borderRadius: 24,
-      paddingVertical: 14,
+      paddingVertical: 10,
       paddingHorizontal: 16,
       fontSize: 16,
       color: colors.textPrimary,
+      includeFontPadding: false,
       shadowColor: "#000",
       shadowOpacity: 0.3,
       shadowRadius: 12,
