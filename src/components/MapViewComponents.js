@@ -1,5 +1,5 @@
 import React, { forwardRef, useEffect, useMemo, useState } from "react";
-import { Image, Platform, StyleSheet, Text, View } from "react-native";
+import { Image, StyleSheet, View } from "react-native";
 import MapView, { Marker, PROVIDER_GOOGLE } from "react-native-maps";
 import MapViewDirections from "react-native-maps-directions";
 import Svg, { Defs, Path, RadialGradient, Stop } from "react-native-svg";
@@ -27,7 +27,7 @@ const getOffsetCenter = (location, heading, distance = 0.00045) => {
     longitude:
       location.longitude -
       (distance * Math.sin(rad)) /
-        Math.cos((location.latitude * Math.PI) / 180),
+      Math.cos((location.latitude * Math.PI) / 180),
   };
 };
 
@@ -96,17 +96,17 @@ const MapViewComponent = forwardRef(
     const [isMarkerModalVisible, setIsMarkerModalVisible] = useState(false);
     const [mapRegion, setMapRegion] = useState(null);
     const [zoomLevel, setZoomLevel] = useState(15);
-    const origin = userLocation || { latitude: 15.4828, longitude: 120.9749 }; // Near NEUST
+    const origin = userLocation; // || { latitude: 15.4828, longitude: 120.9749 }// 
 
     const toRad = (value) => (value * Math.PI) / 180;
 
     const routeVector = destination
       ? {
-          x:
-            (destination.longitude - origin.longitude) *
-            Math.cos(toRad((origin.latitude + destination.latitude) / 2)),
-          y: destination.latitude - origin.latitude,
-        }
+        x:
+          (destination.longitude - origin.longitude) *
+          Math.cos(toRad((origin.latitude + destination.latitude) / 2)),
+        y: destination.latitude - origin.latitude,
+      }
       : { x: 0, y: 0 };
 
     const projectionOnRoute = (point) => {
@@ -387,13 +387,13 @@ const MapViewComponent = forwardRef(
                 mode="WALKING"
                 optimizeWaypoints={false}
                 zIndex={selectedRouteType === "dangerous" ? 4 : 2}
-                onReady={(result) => {
-                  console.log("Dangerous route ready:", result);
-                  onRouteStatsUpdate?.("dangerous", {
-                    duration: result.duration,
-                    distance: result.distance,
-                  });
-                }}
+                // onReady={(result) => {
+                //   console.log("Dangerous route ready:", result);
+                //   onRouteStatsUpdate?.("dangerous", {
+                //     duration: result.duration,
+                //     distance: result.distance,
+                //   });
+                // }}
                 onError={(error) => {
                   console.error("Dangerous route error:", error);
                 }}
@@ -420,16 +420,16 @@ const MapViewComponent = forwardRef(
                 mode="WALKING"
                 optimizeWaypoints={false}
                 zIndex={selectedRouteType === "safe" ? 5 : 3}
-                onReady={(result) => {
-                  console.log("Safe route ready:", result);
-                  onRouteStatsUpdate?.("safe", {
-                    duration: result.duration,
-                    distance: result.distance,
-                  });
-                  if (selectedRouteType === "safe") {
-                    onRouteStepsUpdate?.(result.legs?.[0]?.steps || []);
-                  }
-                }}
+              // onReady={(result) => {
+              //   console.log("Safe route ready:", result);
+              //   onRouteStatsUpdate?.("safe", {
+              //     duration: result.duration,
+              //     distance: result.distance,
+              //   });
+              //   if (selectedRouteType === "safe") {
+              //     onRouteStepsUpdate?.(result.legs?.[0]?.steps || []);
+              //   }
+              // }}
               />
 
               {/* NEW: Alternative Safe Route */}

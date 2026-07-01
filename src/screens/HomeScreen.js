@@ -29,7 +29,7 @@ const HomeScreen = () => {
   const { colors, isDarkMode } = useTheme();
   const styles = createStyles(colors);
   const [threatPins, setThreatPins] = useState([]);
-  const [destination, setDestination] = useState({ latitude: 15.4716, longitude: 120.9822 });
+  const [destination, setDestination] = useState(null);
   const [dynamicSafeHavens, setDynamicSafeHavens] = useState([]);
 
   const [isGuardianActive, setIsGuardianActive] = useState(false);
