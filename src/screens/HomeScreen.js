@@ -633,18 +633,30 @@ const HomeScreen = () => {
         )}
 
         {isNavigating && !isGuardianSheetOpen && (
-          <TouchableOpacity
-            style={[
-              styles.guardianFab,
-              isGuardianActive && styles.guardianFabActive,
-            ]}
-            onPress={() => setIsGuardianSheetOpen(true)}
-          >
-            <ShieldCheck
-              size={22}
-              color={isGuardianActive ? colors.background : colors.neonGreen}
-            />
-          </TouchableOpacity>
+          <>
+            <TouchableOpacity
+              style={styles.reportFab}
+              onPress={() => setIsModalVisible(true)}
+            >
+              <TriangleAlert
+                size={22}
+                color={colors.textPrimary}
+              />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.guardianFab,
+                isGuardianActive && styles.guardianFabActive,
+              ]}
+              onPress={() => setIsGuardianSheetOpen(true)}
+            >
+              <ShieldCheck
+                size={22}
+                color={isGuardianActive ? colors.background : colors.neonGreen}
+              />
+            </TouchableOpacity>
+          </>
         )}
 
         {isNavigating ? (
@@ -869,6 +881,25 @@ const createStyles = (colors) =>
       shadowRadius: 4,
       elevation: 6,
       zIndex: 10,
+    },
+    reportFab: {
+      position: "absolute",
+      bottom: 175,
+      right: 16,
+      width: 52,
+      height: 52,
+      borderRadius: 26,
+      backgroundColor: colors.card,
+      borderWidth: 1.5,
+      borderColor: "rgba(255, 153, 0, 0.4)",
+      justifyContent: "center",
+      alignItems: "center",
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.4,
+      shadowRadius: 6,
+      elevation: 8,
+      zIndex: 31,
     },
     guardianFab: {
       position: "absolute",
