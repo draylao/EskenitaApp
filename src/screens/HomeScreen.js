@@ -395,6 +395,7 @@ const HomeScreen = () => {
                   allowFontScaling: false,
                   onChangeText: (text) => setSearchText(text),
                   clearButtonMode: "never",
+                  placeholderTextColor: colors.textSecondary,
                 }}
                 enablePoweredByContainer={false}
                 renderLeftButton={() => (
