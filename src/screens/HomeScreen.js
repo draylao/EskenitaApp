@@ -2,9 +2,11 @@ import BottomSheet, { BottomSheetView } from "@gorhom/bottom-sheet";
 import * as Location from "expo-location";
 import {
   Navigation,
+  Search,
   ShieldCheck,
   TriangleAlert,
   Users,
+  X,
 } from "lucide-react-native";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Alert, Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
@@ -12,13 +14,13 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { GooglePlacesAutocomplete } from "react-native-google-places-autocomplete";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import GuardianProtectionPanel from "../components/GuardianProtectionPanel";
+import HavenSelectorModal from "../components/HavenSelectorModal";
 import MapViewComponent from "../components/MapViewComponents";
 import NavigationHud from "../components/NavigationHud";
 import RouteComparisonPanel from "../components/RouteComparisonPanel";
 import ThemeToggleButton from "../components/ThemeToggleButton";
 import ThreatReportModal from "../components/ThreatReportModal";
 import UserIconPicker from "../components/UserIconPicker";
-import HavenSelectorModal from "../components/HavenSelectorModal";
 import { analyzeThreatWithAI } from "../services/MockVertexAi";
 import { fetchDynamicSafeHavens } from "../services/PlacesServices";
 import { useTheme } from "../theme/ThemeContext";
@@ -31,6 +33,7 @@ const HomeScreen = () => {
   const [threatPins, setThreatPins] = useState([]);
   const [destination, setDestination] = useState(null);
   const [dynamicSafeHavens, setDynamicSafeHavens] = useState([]);
+  const [searchText, setSearchText] = useState("");
 
   const [isGuardianActive, setIsGuardianActive] = useState(false);
   const [isDeadZoneActive, setIsDeadZoneActive] = useState(false);
@@ -49,7 +52,7 @@ const HomeScreen = () => {
   const [isGuardianSheetOpen, setIsGuardianSheetOpen] = useState(false);
   const [isHavenSelectorVisible, setIsHavenSelectorVisible] = useState(false);
   const [isSelectingDestination, setIsSelectingDestination] = useState(false);
-  
+
   const bottomSheetRef = useRef(null);
   const mapRef = useRef(null);
   const insets = useSafeAreaInsets();
@@ -74,6 +77,7 @@ const HomeScreen = () => {
     setSelectedRouteType("safe");
     setRouteStats({ safe: null, dangerous: null, safeAlt: null });
     googlePlacesRef.current?.setAddressText("");
+    setSearchText("");
   };
 
   const handleSelectRoute = (routeType) => {
@@ -389,15 +393,26 @@ const HomeScreen = () => {
                   scrollEnabled: false,
                   numberOfLines: 1,
                   allowFontScaling: false,
+                  onChangeText: (text) => setSearchText(text),
+                  clearButtonMode: "never",
                 }}
                 enablePoweredByContainer={false}
+                renderLeftButton={() => (
+                  <View style={styles.searchIconContainer}>
+                    <Search size={22} color={colors.textSecondary} />
+                  </View>
+                )}
+                renderRightButton={() =>
+                  searchText.length > 0 || destination ? (
+                    <TouchableOpacity
+                      style={styles.clearIconContainer}
+                      onPress={handleClearRoute}
+                    >
+                      <X size={22} color={colors.textSecondary} />
+                    </TouchableOpacity>
+                  ) : null
+                }
               />
-              <TouchableOpacity
-                style={styles.clearBtn}
-                onPress={handleClearRoute}
-              >
-                <Text style={styles.clearText}>✕</Text>
-              </TouchableOpacity>
             </View>
           </View>
         )}
@@ -430,16 +445,16 @@ const HomeScreen = () => {
 
         {/* Select Destination Button */}
         {!isNavigating && (
-        <TouchableOpacity
-          style={[styles.recenterButton, styles.selectDestinationButton, isSelectingDestination && styles.selectDestinationActive]}
-          onPress={() => setIsSelectingDestination(!isSelectingDestination)}
-        >
-          <Image
-            source={require("../../assets/markers/destination-marker.png")}
-            style={styles.destinationButtonIcon}
-            resizeMode="contain"
-          />
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.recenterButton, styles.selectDestinationButton, isSelectingDestination && styles.selectDestinationActive]}
+            onPress={() => setIsSelectingDestination(!isSelectingDestination)}
+          >
+            <Image
+              source={require("../../assets/markers/destination-marker.png")}
+              style={styles.destinationButtonIcon}
+              resizeMode="contain"
+            />
+          </TouchableOpacity>
         )}
 
         {/* Modern Toolbar Component on Bottom Layer */}
@@ -572,11 +587,11 @@ const HomeScreen = () => {
         )}
 
         <ThreatReportModal
-            visible={isModalVisible}
-            onClose={() => setIsModalVisible(false)}
-            userLocation={userLocation}
-            locationLabel="Current Location"
-            onSubmit={handleReportThreat}
+          visible={isModalVisible}
+          onClose={() => setIsModalVisible(false)}
+          userLocation={userLocation}
+          locationLabel="Current Location"
+          onSubmit={handleReportThreat}
         />
 
         <UserIconPicker
@@ -695,27 +710,29 @@ const createStyles = (colors) =>
       width: "100%",
     },
     textInputContainer: {
-      backgroundColor: "transparent",
-      borderTopWidth: 0,
-      borderBottomWidth: 0,
+      backgroundColor: colors.card,
       flexDirection: "row",
       alignItems: "center",
-    },
-    textInput: {
-      backgroundColor: colors.card,
-      height: 44,
-      borderRadius: 24,
-      paddingVertical: 10,
-      paddingHorizontal: 16,
-      fontSize: 16,
-      color: colors.textPrimary,
-      includeFontPadding: false,
+      borderRadius: 28,
       shadowColor: "#000",
       shadowOpacity: 0.3,
       shadowRadius: 12,
       elevation: 4,
       borderWidth: 1,
       borderColor: colors.border,
+      paddingHorizontal: 15,
+      height: 46,
+    },
+    textInput: {
+      backgroundColor: "transparent",
+      height: "100%",
+      paddingVertical: 0,
+      paddingHorizontal: 0,
+      margin: 6,
+      fontSize: 16,
+      color: colors.textPrimary,
+      flex: 1,
+      textAlignVertical: "center",
     },
     listView: {
       position: "absolute",
@@ -741,22 +758,16 @@ const createStyles = (colors) =>
       color: colors.textPrimary,
       fontSize: 14,
     },
-    clearBtn: {
-      marginLeft: 10,
-      backgroundColor: colors.card,
-      height: 48,
-      width: 48,
-      borderRadius: 24,
+    searchIconContainer: {
+      paddingRight: 8,
       justifyContent: "center",
       alignItems: "center",
-      shadowColor: "#000",
-      shadowOpacity: 0.3,
-      shadowRadius: 12,
-      elevation: 4,
-      borderWidth: 1,
-      borderColor: colors.border,
     },
-    clearText: { color: colors.textPrimary, fontWeight: "600" },
+    clearIconContainer: {
+      paddingLeft: 8,
+      justifyContent: "center",
+      alignItems: "center",
+    },
     sheetBackground: {
       backgroundColor: colors.card,
       borderTopLeftRadius: 24,
