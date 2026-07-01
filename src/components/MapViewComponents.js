@@ -447,16 +447,15 @@ const MapViewComponent = forwardRef(
                 mode="WALKING"
                 optimizeWaypoints={false}
                 zIndex={selectedRouteType === "safe" ? 5 : 3}
-              // onReady={(result) => {
-              //   console.log("Safe route ready:", result);
-              //   onRouteStatsUpdate?.("safe", {
-              //     duration: result.duration,
-              //     distance: result.distance,
-              //   });
-              //   if (selectedRouteType === "safe") {
-              //     onRouteStepsUpdate?.(result.legs?.[0]?.steps || []);
-              //   }
-              // }}
+                onReady={(result) => {
+                  onRouteStatsUpdate?.("safe", {
+                    duration: result.duration,
+                    distance: result.distance,
+                  });
+                  if (selectedRouteType === "safe") {
+                    onRouteStepsUpdate?.(result.legs?.[0]?.steps || []);
+                  }
+                }}
               />
 
               {/* NEW: Alternative Safe Route */}
