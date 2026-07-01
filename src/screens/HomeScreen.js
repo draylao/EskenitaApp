@@ -847,13 +847,13 @@ const createStyles = (colors) =>
     },
     themeToggleButton: {
       position: "absolute",
-      bottom: 340,
+      bottom: 230,
       right: 16,
       zIndex: 10,
     },
     recenterButton: {
       position: "absolute",
-      bottom: 280,
+      bottom: 170,
       right: 16,
       backgroundColor: colors.card,
       width: 48,
@@ -872,7 +872,7 @@ const createStyles = (colors) =>
     },
     guardianFab: {
       position: "absolute",
-      bottom: 230,
+      bottom: 110,
       right: 16,
       width: 52,
       height: 52,
@@ -894,7 +894,7 @@ const createStyles = (colors) =>
       borderColor: colors.neonGreen,
     },
     selectDestinationButton: {
-      bottom: 215,
+      bottom: 110,
     },
     selectDestinationActive: {
       backgroundColor: "#FF7A1A",
