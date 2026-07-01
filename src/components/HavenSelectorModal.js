@@ -265,6 +265,7 @@ const HavenSelectorModal = ({ visible, onClose, havens, userLocation, onSelectHa
   const STEP = CARD_WIDTH + CARD_GAP;
 
   if (!havens || havens.length === 0) return null;
+  if (!userLocation || !userLocation.latitude || !userLocation.longitude) return null;
 
   const havensWithDistance = havens.map((haven) => {
     const distance = calculateDistance(

@@ -69,10 +69,6 @@ const HomeScreen = () => {
   const [navigationSteps, setNavigationSteps] = useState([]);
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
 
-  const handleSetDestination = () => {
-    setDestination({ latitude: 15.4716, longitude: 120.9822 });
-  };
-
   const handleClearRoute = () => {
     setDestination(null);
     setSelectedRouteType("safe");
