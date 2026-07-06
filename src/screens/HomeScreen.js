@@ -9,7 +9,7 @@ import {
   X,
 } from "lucide-react-native";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Alert, Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Alert, Image, Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { GooglePlacesAutocomplete } from "react-native-google-places-autocomplete";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -21,6 +21,7 @@ import RouteComparisonPanel from "../components/RouteComparisonPanel";
 import ThemeToggleButton from "../components/ThemeToggleButton";
 import ThreatReportModal from "../components/ThreatReportModal";
 import UserIconPicker from "../components/UserIconPicker";
+import WebPlacesSearch from "../components/WebPlacesSearch";
 import { analyzeThreatWithAI } from "../services/MockVertexAi";
 import { fetchDynamicSafeHavens } from "../services/PlacesServices";
 import { useTheme } from "../theme/ThemeContext";
@@ -78,6 +79,20 @@ const HomeScreen = () => {
     setRouteStats({ safe: null, dangerous: null, safeAlt: null });
     googlePlacesRef.current?.setAddressText("");
     setSearchText("");
+  };
+
+  const handleNavigateToMarker = (marker) => {
+    if (!marker?.location) return;
+
+    setDestination({
+      latitude: marker.location.latitude,
+      longitude: marker.location.longitude,
+    });
+    setSelectedRouteType("safe");
+    setRouteStats({ safe: null, dangerous: null, safeAlt: null });
+    setIsSelectingDestination(false);
+    setIsNavigating(true);
+    setCurrentStepIndex(0);
   };
 
   const handleSelectRoute = (routeType) => {
@@ -283,6 +298,8 @@ const HomeScreen = () => {
       );
 
       // Subscribe to device heading updates for the navigation cone
+      // (not supported in browsers — expo-location throws on web)
+      if (Platform.OS === "web") return;
       headingSubscription = await Location.watchHeadingAsync((headingObj) => {
         const newHeading =
           headingObj.trueHeading !== -1
@@ -340,6 +357,7 @@ const HomeScreen = () => {
               setRouteStats({ safe: null, dangerous: null });
             }
           }}
+          onNavigateToMarker={handleNavigateToMarker}
           colors={colors}
         />
 
@@ -347,6 +365,31 @@ const HomeScreen = () => {
         {!isNavigating && (
           <View style={styles.searchContainer}>
             <View style={styles.searchRowContainer}>
+              {Platform.OS === "web" ? (
+                // Google Places autocomplete can't run in browsers (CORS);
+                // use an OpenStreetMap-backed search on web instead
+                <WebPlacesSearch
+                  placeholder={
+                    destination ? "Routing to Destination..." : "Search here"
+                  }
+                  userLocation={userLocation}
+                  hasDestination={!!destination}
+                  colors={colors}
+                  onSelect={(coords) => {
+                    setDestination({
+                      latitude: coords.latitude,
+                      longitude: coords.longitude,
+                    });
+                    setSelectedRouteType("safe");
+                    setRouteStats({
+                      safe: null,
+                      dangerous: null,
+                      safeAlt: null,
+                    });
+                  }}
+                  onClear={handleClearRoute}
+                />
+              ) : (
               <GooglePlacesAutocomplete
                 ref={googlePlacesRef}
                 placeholder={
@@ -414,6 +457,7 @@ const HomeScreen = () => {
                   ) : null
                 }
               />
+              )}
             </View>
           </View>
         )}

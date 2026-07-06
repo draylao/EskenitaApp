@@ -85,6 +85,7 @@ const MapViewComponent = forwardRef(
       onRouteStepsUpdate,
       isSelectingDestination = false,
       onMapPress,
+      onNavigateToMarker,
       colors,
     },
     ref,
@@ -284,6 +285,14 @@ const MapViewComponent = forwardRef(
         return false;
       });
     }, [safeHavens, origin, destination]);
+
+    const handleGoFromMarker = () => {
+      if (selectedMarker?.location && onNavigateToMarker) {
+        onNavigateToMarker(selectedMarker);
+      }
+      setIsMarkerModalVisible(false);
+      setSelectedMarker(null);
+    };
 
     return (
       <View style={styles.container}>
@@ -511,6 +520,7 @@ const MapViewComponent = forwardRef(
                   color: "#39FF14",
                   rating: haven.rating,
                   description: "Safe haven location",
+                  location: haven.latlng,
                 });
                 setIsMarkerModalVisible(true);
               }}
@@ -564,6 +574,7 @@ const MapViewComponent = forwardRef(
             setIsMarkerModalVisible(false);
             setSelectedMarker(null);
           }}
+          onGo={handleGoFromMarker}
           marker={selectedMarker}
         />
       </View>

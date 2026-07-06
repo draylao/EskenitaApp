@@ -4,7 +4,7 @@ import ShieldIcon from "./icons/ShieldIcon";
 import AlertIcon from "./icons/AlertIcon";
 import MapPinIcon from "./icons/MapPinIcon";
 
-const MarkerDetailModal = ({ visible, onClose, marker }) => {
+const MarkerDetailModal = ({ visible, onClose, marker, onGo }) => {
   if (!marker) return null;
 
   const getIcon = () => {
@@ -64,6 +64,15 @@ const MarkerDetailModal = ({ visible, onClose, marker }) => {
             )}
           </View>
           
+          {marker?.type === "haven" && onGo && (
+            <TouchableOpacity
+              style={[styles.goBtn, { backgroundColor: marker.color || "#39FF14" }]}
+              onPress={onGo}
+            >
+              <Text style={styles.goBtnText}>Go</Text>
+            </TouchableOpacity>
+          )}
+
           <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
             <Text style={styles.closeText}>Close</Text>
           </TouchableOpacity>
@@ -149,6 +158,20 @@ const styles = StyleSheet.create({
     color: "#495057",
     fontSize: 14,
     lineHeight: 20,
+  },
+  goBtn: {
+    backgroundColor: "#39FF14",
+    paddingVertical: 14,
+    paddingHorizontal: 18,
+    alignItems: "center",
+    marginHorizontal: 24,
+    marginBottom: 12,
+    borderRadius: 14,
+  },
+  goBtnText: {
+    color: "#0F172A",
+    fontWeight: "700",
+    fontSize: 15,
   },
   closeBtn: {
     backgroundColor: "#F8F9FA",
