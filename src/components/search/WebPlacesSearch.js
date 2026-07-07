@@ -4,13 +4,13 @@
 import { Search, X } from "lucide-react-native";
 import { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import useDebounce from "../../hooks/useDebounce";
 
@@ -190,6 +190,7 @@ const createStyles = (colors) =>
       elevation: 8,
       borderWidth: 1,
       borderColor: colors.border,
+      zIndex: 1000,
     },
     row: {
       padding: 14,

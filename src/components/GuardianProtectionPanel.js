@@ -178,7 +178,7 @@ const GuardianProtectionPanel = ({
               <Text style={styles.imSafeText}>I am Safe</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.sosBtn} onPress={onTriggerSOS}>
-              <Siren size={15} color={colors.neonRed} />
+              <Siren size={15} color="#15120F" />
               <Text style={styles.sosText}>Test SOS</Text>
             </TouchableOpacity>
           </View>
@@ -426,14 +426,14 @@ const createStyles = (colors) =>
       alignItems: "center",
       justifyContent: "center",
       gap: 6,
-      backgroundColor: colors.card,
+      backgroundColor: colors.neonRed,
       borderWidth: 1,
       borderColor: colors.neonRed,
       paddingVertical: 10,
       borderRadius: 24,
     },
     sosText: {
-      color: colors.neonRed,
+      color: "#15120F",
       fontWeight: "700",
       fontSize: 13,
     },
