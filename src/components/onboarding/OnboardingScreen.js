@@ -12,6 +12,7 @@ const OnboardingScreen = ({ visible, onComplete, onSkip }) => {
   const handleComplete = async () => {
     try {
       await AsyncStorage.setItem(ONBOARDING_COMPLETED_KEY, "true");
+      console.log("Onboarding completed, saved to storage");
       onComplete();
     } catch (error) {
       console.error("Error saving onboarding status:", error);
@@ -22,6 +23,7 @@ const OnboardingScreen = ({ visible, onComplete, onSkip }) => {
   const handleSkip = async () => {
     try {
       await AsyncStorage.setItem(ONBOARDING_COMPLETED_KEY, "true");
+      console.log("Onboarding skipped, saved to storage");
       onSkip();
     } catch (error) {
       console.error("Error saving onboarding status:", error);
@@ -42,8 +44,6 @@ const OnboardingScreen = ({ visible, onComplete, onSkip }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
   },
 });
 

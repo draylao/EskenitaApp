@@ -30,7 +30,9 @@ function AppContent() {
   const checkOnboardingStatus = async () => {
     try {
       const completed = await AsyncStorage.getItem(ONBOARDING_COMPLETED_KEY);
-      setShowOnboarding(!completed);
+      console.log("Onboarding status from storage:", completed);
+      // Only show onboarding if not completed
+      setShowOnboarding(completed !== "true");
     } catch (error) {
       console.error("Error checking onboarding status:", error);
       setShowOnboarding(true);

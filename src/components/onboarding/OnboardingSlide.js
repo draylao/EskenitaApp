@@ -1,5 +1,5 @@
 import React from "react";
-import { SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Platform, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useTheme } from "../../theme/ThemeContext";
 import CommunityIllustration from "./illustrations/CommunityIllustration";
 import ConnectedIllustration from "./illustrations/ConnectedIllustration";
@@ -33,54 +33,105 @@ const OnboardingSlide = ({
 
   return (
     <View style={styles.slide}>
-      <SafeAreaView style={styles.safeArea}>
-        <View style={styles.content}>
-          {/* Illustration */}
-          <View style={styles.illustrationContainer}>{renderIllustration()}</View>
+      {Platform.OS === "web" ? (
+        <View style={styles.safeArea}>
+          <View style={styles.content}>
+            {/* Illustration */}
+            <View style={styles.illustrationContainer}>{renderIllustration()}</View>
 
-          {/* Text Content */}
-          <View style={styles.textContainer}>
-            <Text style={[styles.subtitle, { color: colors.primary }]}>{screen.subtitle}</Text>
-            <Text style={[styles.title, { color: colors.textPrimary }]}>{screen.title}</Text>
-            <Text style={[styles.description, { color: colors.textSecondary }]}>
-              {screen.description}
-            </Text>
-            <Text style={[styles.brandLine, { color: colors.textSecondary, opacity: 0.7 }]}>
-              {screen.brandLine}
-            </Text>
-          </View>
+            {/* Text Content */}
+            <View style={styles.textContainer}>
+              <Text style={[styles.subtitle, { color: colors.primary }]}>{screen.subtitle}</Text>
+              <Text style={[styles.title, { color: colors.textPrimary }]}>{screen.title}</Text>
+              <Text style={[styles.description, { color: colors.textSecondary }]}>
+                {screen.description}
+              </Text>
+              <Text style={[styles.brandLine, { color: colors.textSecondary, opacity: 0.7 }]}>
+                {screen.brandLine}
+              </Text>
+            </View>
 
-          {/* Page Indicators */}
-          <View style={styles.indicatorContainer}>
-            {[0, 1, 2, 3].map((i) => (
-              <View
-                key={i}
-                style={[
-                  styles.indicator,
-                  {
-                    backgroundColor: i === index ? colors.primary : colors.border,
-                    width: i === index ? 24 : 8,
-                  },
-                ]}
-              />
-            ))}
-          </View>
+            {/* Page Indicators */}
+            <View style={styles.indicatorContainer}>
+              {[0, 1, 2, 3].map((i) => (
+                <View
+                  key={i}
+                  style={[
+                    styles.indicator,
+                    {
+                      backgroundColor: i === index ? colors.primary : colors.border,
+                      width: i === index ? 24 : 8,
+                    },
+                  ]}
+                />
+              ))}
+            </View>
 
-          {/* Buttons */}
-          <View style={styles.buttonContainer}>
-            <TouchableOpacity style={styles.skipButton} onPress={onSkip}>
-              <Text style={[styles.skipText, { color: colors.textSecondary }]}>Skip</Text>
-            </TouchableOpacity>
+            {/* Buttons */}
+            <View style={styles.buttonContainer}>
+              <TouchableOpacity style={styles.skipButton} onPress={onSkip}>
+                <Text style={[styles.skipText, { color: colors.textSecondary }]}>Skip</Text>
+              </TouchableOpacity>
 
-            <TouchableOpacity
-              style={[styles.nextButton, { backgroundColor: colors.primary }]}
-              onPress={onNext}
-            >
-              <Text style={styles.nextText}>{screen.cta}</Text>
-            </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.nextButton, { backgroundColor: colors.primary }]}
+                onPress={onNext}
+              >
+                <Text style={styles.nextText}>{screen.cta}</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
-      </SafeAreaView>
+      ) : (
+        <SafeAreaView style={styles.safeArea}>
+          <View style={styles.content}>
+            {/* Illustration */}
+            <View style={styles.illustrationContainer}>{renderIllustration()}</View>
+
+            {/* Text Content */}
+            <View style={styles.textContainer}>
+              <Text style={[styles.subtitle, { color: colors.primary }]}>{screen.subtitle}</Text>
+              <Text style={[styles.title, { color: colors.textPrimary }]}>{screen.title}</Text>
+              <Text style={[styles.description, { color: colors.textSecondary }]}>
+                {screen.description}
+              </Text>
+              <Text style={[styles.brandLine, { color: colors.textSecondary, opacity: 0.7 }]}>
+                {screen.brandLine}
+              </Text>
+            </View>
+
+            {/* Page Indicators */}
+            <View style={styles.indicatorContainer}>
+              {[0, 1, 2, 3].map((i) => (
+                <View
+                  key={i}
+                  style={[
+                    styles.indicator,
+                    {
+                      backgroundColor: i === index ? colors.primary : colors.border,
+                      width: i === index ? 24 : 8,
+                    },
+                  ]}
+                />
+              ))}
+            </View>
+
+            {/* Buttons */}
+            <View style={styles.buttonContainer}>
+              <TouchableOpacity style={styles.skipButton} onPress={onSkip}>
+                <Text style={[styles.skipText, { color: colors.textSecondary }]}>Skip</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.nextButton, { backgroundColor: colors.primary }]}
+                onPress={onNext}
+              >
+                <Text style={styles.nextText}>{screen.cta}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </SafeAreaView>
+      )}
     </View>
   );
 };
@@ -89,7 +140,7 @@ const styles = StyleSheet.create({
   slide: {
     flex: 1,
     width: "100%",
-    maxWidth: Platform.OS === "web" ? 500 : undefined,
+    maxWidth: Platform.OS === "web" ? 600 : undefined,
     alignSelf: "center",
   },
   safeArea: {
@@ -98,8 +149,8 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: 32,
-    paddingTop: 40,
-    paddingBottom: 40,
+    paddingTop: Platform.OS === "web" ? 60 : 40,
+    paddingBottom: Platform.OS === "web" ? 60 : 40,
     justifyContent: "space-between",
     alignItems: "center",
   },
