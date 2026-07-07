@@ -1,11 +1,15 @@
 import React from "react";
-import { View, StyleSheet } from "react-native";
+import { Platform, StyleSheet, View } from "react-native";
 import { Svg, Path, Circle, Defs, LinearGradient, Stop } from "react-native-svg";
+
+// Percentage sizes collapse to 0 through react-native-svg's web wrapper
+const ILLU_WIDTH = Platform.OS === "web" ? 206 : 274;
+const ILLU_HEIGHT = Platform.OS === "web" ? 180 : 240;
 
 const ConnectedIllustration = ({ colors }) => {
   return (
     <View style={styles.container}>
-      <Svg width="320" height="280" viewBox="0 0 320 280">
+      <Svg width={ILLU_WIDTH} height={ILLU_HEIGHT} viewBox="0 0 320 280">
         <Defs>
           <LinearGradient id="connectionGradient" x1="0%" y1="0%" x2="100%" y2="100%">
             <Stop offset="0%" stopColor={colors.primary} stopOpacity="0.6" />
@@ -96,9 +100,10 @@ const ConnectedIllustration = ({ colors }) => {
 
 const styles = StyleSheet.create({
   container: {
+    width: "100%",
+    height: "100%",
     alignItems: "center",
     justifyContent: "center",
-    marginVertical: 20,
   },
 });
 

@@ -68,8 +68,10 @@ const WebPlacesSearch = ({
             ].join(","),
           );
         }
+        console.log("Searching Nominatim with query:", query);
         const response = await fetch(`${NOMINATIM_URL}?${params}`);
         const data = await response.json();
+        console.log("Nominatim response:", data);
         if (!cancelled) setResults(Array.isArray(data) ? data : []);
       } catch (error) {
         console.error("Nominatim search error:", error);
@@ -87,6 +89,7 @@ const WebPlacesSearch = ({
   }, [debouncedText]);
 
   const handleSelect = (item) => {
+    console.log("Selected item:", item);
     setResults([]);
     setText(item.display_name.split(",")[0]);
     onSelect?.({

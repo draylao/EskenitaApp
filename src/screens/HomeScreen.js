@@ -1,12 +1,12 @@
 import BottomSheet, { BottomSheetView } from "@gorhom/bottom-sheet";
 import * as Location from "expo-location";
 import {
-    Navigation,
-    Search,
-    ShieldCheck,
-    TriangleAlert,
-    Users,
-    X,
+  Navigation,
+  Search,
+  ShieldCheck,
+  TriangleAlert,
+  Users,
+  X,
 } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Alert, Image, Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
@@ -223,20 +223,37 @@ const HomeScreen = () => {
   const handleRecenter = useCallback(() => {
     if (!mapRef.current) return;
     if (!userLocation) return;
-    if (!mapRef.current.animateCamera) return;
 
     try {
-      mapRef.current.animateCamera(
-        {
-          center: {
-            latitude: userLocation.latitude,
-            longitude: userLocation.longitude,
-          },
-        },
-        { duration: 1000 },
-      );
+      if (Platform.OS === "web") {
+        // Web uses MapLibre - use animateCamera which internally uses easeTo
+        if (mapRef.current.animateCamera) {
+          mapRef.current.animateCamera(
+            {
+              center: {
+                latitude: userLocation.latitude,
+                longitude: userLocation.longitude,
+              },
+            },
+            { duration: 1000 },
+          );
+        }
+      } else {
+        // Native uses Google Maps - use animateCamera
+        if (mapRef.current.animateCamera) {
+          mapRef.current.animateCamera(
+            {
+              center: {
+                latitude: userLocation.latitude,
+                longitude: userLocation.longitude,
+              },
+            },
+            { duration: 1000 },
+          );
+        }
+      }
     } catch (error) {
-      console.error("Error calling animateCamera:", error);
+      console.error("Error recentering map:", error);
     }
   }, [userLocation]);
 

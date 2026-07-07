@@ -1167,15 +1167,18 @@ const MapViewComponent = forwardRef(
           }
           try {
             activeAnimationRef.current = { type: 'animateCamera' };
-            map.easeTo({
-              center: camera.center
-                ? [camera.center.longitude, camera.center.latitude]
-                : undefined,
-              zoom: camera.zoom != null ? Math.min(camera.zoom, 19) : undefined,
-              pitch: camera.pitch != null ? Math.min(camera.pitch, 70) : undefined,
-              bearing: camera.heading ?? undefined,
-              duration: options.duration ?? 600,
-            });
+            // Only include keys that have real values: MapLibre's easeTo
+            // uses `'zoom' in options` checks, so a key that is explicitly
+            // undefined gets coerced to NaN and permanently corrupts the
+            // camera transform (blank, unresponsive map).
+            const opts = { duration: options.duration ?? 600 };
+            if (camera.center) {
+              opts.center = [camera.center.longitude, camera.center.latitude];
+            }
+            if (camera.zoom != null) opts.zoom = Math.min(camera.zoom, 19);
+            if (camera.pitch != null) opts.pitch = Math.min(camera.pitch, 70);
+            if (camera.heading != null) opts.bearing = camera.heading;
+            map.easeTo(opts);
           } catch (err) {
             console.error('Error in animateCamera:', err);
             activeAnimationRef.current = null;
@@ -1191,14 +1194,15 @@ const MapViewComponent = forwardRef(
           }
           try {
             activeAnimationRef.current = { type: 'animateToRegion' };
-            const zoom = region.latitudeDelta
-              ? Math.min(Math.log2(360 / region.latitudeDelta), 19)
-              : undefined;
-            map.easeTo({
+            // Same NaN guard as animateCamera: never pass undefined keys
+            const opts = {
               center: [region.longitude, region.latitude],
-              zoom,
               duration,
-            });
+            };
+            if (region.latitudeDelta) {
+              opts.zoom = Math.min(Math.log2(360 / region.latitudeDelta), 19);
+            }
+            map.easeTo(opts);
           } catch (err) {
             console.error('Error in animateToRegion:', err);
             activeAnimationRef.current = null;
