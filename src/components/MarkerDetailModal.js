@@ -1,167 +1,243 @@
-import { Modal, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { colors } from "../theme/colors";
-import ShieldIcon from "./icons/ShieldIcon";
+import {
+  Modal,
+  Pressable,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { useTheme } from "../theme/ThemeContext";
 import AlertIcon from "./icons/AlertIcon";
 import MapPinIcon from "./icons/MapPinIcon";
+import ShieldIcon from "./icons/ShieldIcon";
 
-const MarkerDetailModal = ({ visible, onClose, marker }) => {
+const TYPE_LABELS = {
+  haven: "Safe Haven",
+  threat: "Reported Threat",
+  destination: "Destination",
+};
+
+/**
+ * Bottom-sheet style detail card for map markers (havens, threats,
+ * destination). Slides up from the bottom like modern navigation apps;
+ * tapping the dimmed backdrop dismisses it.
+ */
+const MarkerDetailModal = ({ visible, onClose, marker, onGo }) => {
+  const { colors } = useTheme();
   if (!marker) return null;
+
+  const styles = createStyles(colors);
+  const accent = marker.color || colors.primary;
 
   const getIcon = () => {
     switch (marker.type) {
       case "haven":
-        return <ShieldIcon size={32} color={marker.color} />;
+        return <ShieldIcon size={26} color={accent} />;
       case "threat":
-        return <AlertIcon size={32} color={marker.color} />;
-      case "destination":
-        return <MapPinIcon size={32} color={marker.color} />;
+        return <AlertIcon size={26} color={accent} />;
       default:
-        return <MapPinIcon size={32} color={marker.color} />;
+        return <MapPinIcon size={26} color={accent} />;
     }
   };
 
   return (
-    <Modal visible={visible} transparent animationType="fade">
-      <View style={styles.overlay}>
-        <View style={styles.container}>
-          <View style={styles.header}>
-            <View style={[styles.iconContainer, { backgroundColor: marker.color + "20" }]}>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="slide"
+      onRequestClose={onClose}
+    >
+      {/* Backdrop tap dismisses, like a real bottom sheet */}
+      <Pressable style={styles.overlay} onPress={onClose}>
+        <Pressable style={styles.card} onPress={() => {}}>
+          <View style={styles.handle} />
+
+          <View style={styles.headerRow}>
+            <View
+              style={[styles.iconBubble, { backgroundColor: accent + "22" }]}
+            >
               {getIcon()}
             </View>
-            <Text style={styles.title}>{marker.title}</Text>
-            <View style={[styles.typeBadge, { backgroundColor: marker.color }]}>
-              <Text style={styles.typeText}>{marker.type}</Text>
+            <View style={styles.headerText}>
+              <Text style={styles.title} numberOfLines={2}>
+                {marker.title}
+              </Text>
+              <Text style={[styles.typeLabel, { color: accent }]}>
+                {TYPE_LABELS[marker.type] || "Location"}
+              </Text>
             </View>
-          </View>
-          
-          <View style={styles.content}>
-            {marker.rating && (
-              <View style={styles.detailRow}>
-                <Text style={styles.label}>Rating</Text>
-                <Text style={styles.value}>{marker.rating} ⭐</Text>
-              </View>
-            )}
-            
-            {marker.distance && (
-              <View style={styles.detailRow}>
-                <Text style={styles.label}>Distance</Text>
-                <Text style={styles.value}>{marker.distance} km</Text>
-              </View>
-            )}
-            
-            {marker.severity && (
-              <View style={styles.detailRow}>
-                <Text style={styles.label}>Severity</Text>
-                <Text style={[styles.value, { color: marker.color }]}>{marker.severity}</Text>
-              </View>
-            )}
-            
-            {marker.description && (
-              <View style={styles.descriptionContainer}>
-                <Text style={styles.label}>Description</Text>
-                <Text style={styles.description}>{marker.description}</Text>
+            {marker.rating != null && marker.rating > 0 && (
+              <View style={styles.ratingPill}>
+                <Text style={styles.ratingText}>⭐ {marker.rating}</Text>
               </View>
             )}
           </View>
-          
-          <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
-            <Text style={styles.closeText}>Close</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+
+          {(marker.severity || marker.distance) && (
+            <View style={styles.chipRow}>
+              {marker.severity && (
+                <View style={[styles.chip, { borderColor: accent }]}>
+                  <Text style={[styles.chipText, { color: accent }]}>
+                    Severity: {marker.severity}
+                  </Text>
+                </View>
+              )}
+              {marker.distance && (
+                <View style={styles.chip}>
+                  <Text style={styles.chipText}>{marker.distance} km away</Text>
+                </View>
+              )}
+            </View>
+          )}
+
+          {marker.description && (
+            <Text style={styles.description}>{marker.description}</Text>
+          )}
+
+          <View style={styles.buttonRow}>
+            <TouchableOpacity style={styles.secondaryBtn} onPress={onClose}>
+              <Text style={styles.secondaryBtnText}>Close</Text>
+            </TouchableOpacity>
+            {marker?.type === "haven" && onGo && (
+              <TouchableOpacity
+                style={[styles.primaryBtn, { backgroundColor: accent }]}
+                onPress={onGo}
+              >
+                <Text style={styles.primaryBtnText}>Go</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </Pressable>
+      </Pressable>
     </Modal>
   );
 };
 
-const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.3)",
-    justifyContent: "center",
-    padding: 24,
-  },
-  container: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 24,
-    overflow: "hidden",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 20,
-    elevation: 8,
-  },
-  header: {
-    padding: 24,
-    alignItems: "center",
-    gap: 12,
-    backgroundColor: "#F8F9FA",
-  },
-  iconContainer: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  title: {
-    color: "#212529",
-    fontSize: 20,
-    fontWeight: "700",
-    textAlign: "center",
-  },
-  typeBadge: {
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-    borderRadius: 16,
-  },
-  typeText: {
-    color: "#FFFFFF",
-    fontSize: 12,
-    fontWeight: "600",
-    textTransform: "capitalize",
-  },
-  content: {
-    padding: 24,
-    gap: 16,
-    backgroundColor: "#FFFFFF",
-  },
-  detailRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 8,
-  },
-  label: {
-    color: "#6C757D",
-    fontSize: 14,
-    fontWeight: "500",
-  },
-  value: {
-    color: "#212529",
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  descriptionContainer: {
-    gap: 8,
-    paddingVertical: 8,
-  },
-  description: {
-    color: "#495057",
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  closeBtn: {
-    backgroundColor: "#F8F9FA",
-    padding: 18,
-    alignItems: "center",
-    borderTopWidth: 1,
-    borderTopColor: "#E9ECEF",
-  },
-  closeText: {
-    color: "#212529",
-    fontWeight: "600",
-    fontSize: 16,
-  },
-});
+const createStyles = (colors) =>
+  StyleSheet.create({
+    overlay: {
+      flex: 1,
+      backgroundColor: "rgba(0, 0, 0, 0.45)",
+      justifyContent: "flex-end",
+    },
+    card: {
+      backgroundColor: colors.card,
+      borderTopLeftRadius: 28,
+      borderTopRightRadius: 28,
+      borderWidth: 1,
+      borderBottomWidth: 0,
+      borderColor: colors.border,
+      paddingHorizontal: 22,
+      paddingTop: 10,
+      paddingBottom: 30,
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: -6 },
+      shadowOpacity: 0.35,
+      shadowRadius: 18,
+      elevation: 16,
+      // Keep the sheet readable on wide desktop windows
+      alignSelf: "center",
+      width: "100%",
+      maxWidth: 520,
+    },
+    handle: {
+      alignSelf: "center",
+      width: 40,
+      height: 4,
+      borderRadius: 2,
+      backgroundColor: colors.border,
+      marginBottom: 16,
+    },
+    headerRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 14,
+    },
+    iconBubble: {
+      width: 52,
+      height: 52,
+      borderRadius: 26,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    headerText: { flex: 1 },
+    title: {
+      color: colors.textPrimary,
+      fontSize: 19,
+      fontWeight: "700",
+      letterSpacing: 0.2,
+    },
+    typeLabel: {
+      fontSize: 12,
+      fontWeight: "700",
+      textTransform: "uppercase",
+      letterSpacing: 0.8,
+      marginTop: 2,
+    },
+    ratingPill: {
+      backgroundColor: colors.surfaceLight,
+      borderRadius: 14,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+    },
+    ratingText: {
+      color: colors.textPrimary,
+      fontSize: 13,
+      fontWeight: "700",
+    },
+    chipRow: {
+      flexDirection: "row",
+      gap: 8,
+      marginTop: 16,
+      flexWrap: "wrap",
+    },
+    chip: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 14,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+    },
+    chipText: {
+      color: colors.textSecondary,
+      fontSize: 12,
+      fontWeight: "600",
+    },
+    description: {
+      color: colors.textSecondary,
+      fontSize: 14,
+      lineHeight: 21,
+      marginTop: 14,
+    },
+    buttonRow: {
+      flexDirection: "row",
+      gap: 10,
+      marginTop: 22,
+    },
+    secondaryBtn: {
+      flex: 1,
+      paddingVertical: 14,
+      borderRadius: 16,
+      alignItems: "center",
+      backgroundColor: colors.surfaceLight,
+    },
+    secondaryBtnText: {
+      color: colors.textPrimary,
+      fontWeight: "700",
+      fontSize: 15,
+    },
+    primaryBtn: {
+      flex: 2,
+      paddingVertical: 14,
+      borderRadius: 16,
+      alignItems: "center",
+    },
+    primaryBtnText: {
+      color: "#0F172A",
+      fontWeight: "800",
+      fontSize: 15,
+      letterSpacing: 0.3,
+    },
+  });
 
 export default MarkerDetailModal;

@@ -3,10 +3,10 @@ import { Image, StyleSheet, TouchableOpacity, View } from "react-native";
 
 // Lookup tables instead of switch functions so we don't rebuild these on every render
 const MARKER_IMAGES = {
-  haven: require("../../assets/markers/haven-marker.png"),
-  threat: require("../../assets/markers/threat-marker.png"),
-  destination: require("../../assets/markers/destination-marker.png"),
-  default: require("../../assets/markers/default-marker.png"),
+  haven: require("../../../assets/markers/haven-marker.png"),
+  threat: require("../../../assets/markers/threat-marker.png"),
+  destination: require("../../../assets/markers/destination-marker.png"),
+  default: require("../../../assets/markers/default-marker.png"),
 };
 
 const MARKER_COLORS = {

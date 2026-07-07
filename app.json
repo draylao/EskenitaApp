@@ -25,7 +25,9 @@
       "output": "static",
       "favicon": "./assets/images/favicon.png"
     },
-    "plugins": [],
+    "plugins": [
+      "expo-asset"
+    ],
     "experiments": {
       "typedRoutes": false,
       "reactCompiler": true

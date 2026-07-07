@@ -2,6 +2,7 @@ import { StatusBar, StyleSheet } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import HomeScreen from "./src/screens/HomeScreen";
 import { ThemeProvider } from "./src/theme/ThemeContext";
+import "./src/utils/webAlertPolyfill";
 
 export default function App() {
   return (
