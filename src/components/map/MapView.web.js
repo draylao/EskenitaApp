@@ -244,7 +244,11 @@ const MapViewComponent = forwardRef(
     const selectedRouteTypeRef = useRef(selectedRouteType);
     selectedRouteTypeRef.current = selectedRouteType;
     const handlersRef = useRef({});
-    handlersRef.current = { isSelectingDestination, onMapPress, onCameraChanged };
+    handlersRef.current = {
+      isSelectingDestination,
+      onMapPress,
+      onCameraChanged,
+    };
     const wasNavigatingRef = useRef(false);
     const activeAnimationRef = useRef(null);
 
@@ -424,20 +428,20 @@ const MapViewComponent = forwardRef(
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [JSON.stringify(forwardHavens), destination, balancedSafeWaypoints]);
 
-    const visibleSafeHavens = useMemo(() => {
-      return safeHavens.filter((haven) => {
+    const visiblePlaces = useMemo(() => {
+      return safeHavens.filter((place) => {
         if (!origin) return true;
-        const dx = haven.latlng.longitude - origin.longitude;
-        const dy = haven.latlng.latitude - origin.latitude;
+        const dx = place.latlng.longitude - origin.longitude;
+        const dy = place.latlng.latitude - origin.latitude;
         const x =
-          dx * Math.cos(toRad((origin.latitude + haven.latlng.latitude) / 2));
+          dx * Math.cos(toRad((origin.latitude + place.latlng.latitude) / 2));
         const distToUserKm = Math.sqrt(x * x + dy * dy) * 111.32;
 
-        if (distToUserKm <= 0.3) return true;
+        if (distToUserKm <= 2.5) return true;
         if (destination) {
-          const proj = projectionOnRoute(haven.latlng);
+          const proj = projectionOnRoute(place.latlng);
           if (proj >= -0.1 && proj <= 1.1) {
-            if (distanceToRoute(haven.latlng) <= 0.3) return true;
+            if (distanceToRoute(place.latlng) <= 1.2) return true;
           }
         }
         return false;
@@ -450,24 +454,26 @@ const MapViewComponent = forwardRef(
     // ------------------------------------------------------------------
     const havensGeoJson = useMemo(() => {
       havenByIdRef.current = new Map(
-        visibleSafeHavens.map((h) => [String(h.id), h]),
+        visiblePlaces.map((place) => [String(place.id), place]),
       );
       return {
         type: "FeatureCollection",
-        features: visibleSafeHavens.map((h) => ({
+        features: visiblePlaces.map((place) => ({
           type: "Feature",
           geometry: {
             type: "Point",
-            coordinates: [h.latlng.longitude, h.latlng.latitude],
+            coordinates: [place.latlng.longitude, place.latlng.latitude],
           },
           properties: {
-            id: String(h.id),
-            title: h.title,
-            rating: h.rating,
+            id: String(place.id),
+            title: place.title,
+            rating: place.rating,
+            kind: "safe_haven",
+            description: place.description || "Safe haven",
           },
         })),
       };
-    }, [visibleSafeHavens]);
+    }, [visiblePlaces]);
 
     const threatsGeoJson = useMemo(
       () => ({
@@ -709,114 +715,117 @@ const MapViewComponent = forwardRef(
       });
 
       const createMap = () => {
-      const map = new maplibregl.Map({
-        container: containerRef.current,
-        style: isDark ? DARK_STYLE : LIGHT_STYLE,
-        center: [origin.longitude, origin.latitude],
-        zoom: 15.5,
-        attributionControl: { compact: true },
-        maxPitch: 70,
-      });
-      mapRef.current = map;
-      setMapInstance(map);
-      if (typeof window !== "undefined" && process.env.NODE_ENV !== "production") {
-        window.__ESKENITA_MAP__ = map; // dev-only handle for debugging
-      }
-
-      map.addControl(new maplibregl.ScaleControl(), "bottom-left");
-
-      map.on("style.load", () => {
-        ensureOverlays(map);
-      });
-      map.once("load", () => setIsMapReady(true));
-
-      // Tap-to-set-destination
-      map.on("click", (e) => {
-        const h = handlersRef.current;
-        if (h.isSelectingDestination && h.onMapPress) {
-          h.onMapPress({ latitude: e.lngLat.lat, longitude: e.lngLat.lng });
+        const map = new maplibregl.Map({
+          container: containerRef.current,
+          style: isDark ? DARK_STYLE : LIGHT_STYLE,
+          center: [origin.longitude, origin.latitude],
+          zoom: 15.5,
+          attributionControl: { compact: true },
+          maxPitch: 70,
+        });
+        mapRef.current = map;
+        setMapInstance(map);
+        if (
+          typeof window !== "undefined" &&
+          process.env.NODE_ENV !== "production"
+        ) {
+          window.__ESKENITA_MAP__ = map; // dev-only handle for debugging
         }
-      });
 
-      // Marker taps → detail card (skipped while picking a destination)
-      map.on("click", "havens-point", (e) => {
-        if (handlersRef.current.isSelectingDestination) return;
-        const props = e.features?.[0]?.properties;
-        const haven = props && havenByIdRef.current.get(String(props.id));
-        if (!haven) return;
-        setSelectedMarker({
-          type: "haven",
-          title: haven.title,
-          color: HAVEN_COLOR,
-          rating: haven.rating,
-          description: "Safe haven location",
-          location: haven.latlng,
-        });
-        setIsMarkerModalVisible(true);
-      });
-      map.on("click", "threats-point", (e) => {
-        if (handlersRef.current.isSelectingDestination) return;
-        const props = e.features?.[0]?.properties;
-        if (!props) return;
-        setSelectedMarker({
-          type: "threat",
-          title: props.title,
-          color: THREAT_COLOR,
-          severity: props.severity,
-          description: props.description,
-        });
-        setIsMarkerModalVisible(true);
-      });
+        map.addControl(new maplibregl.ScaleControl(), "bottom-left");
 
-      // Cluster taps → zoom into the cluster
-      ["havens", "threats"].forEach((key) => {
-        map.on("click", `${key}-clusters`, async (e) => {
-          const feature = e.features?.[0];
-          if (!feature) return;
-          const zoom = await map
-            .getSource(key)
-            .getClusterExpansionZoom(feature.properties.cluster_id);
-          map.easeTo({
-            center: feature.geometry.coordinates,
-            zoom: zoom + 0.5,
-            duration: 500,
+        map.on("style.load", () => {
+          ensureOverlays(map);
+        });
+        map.once("load", () => setIsMapReady(true));
+
+        // Tap-to-set-destination
+        map.on("click", (e) => {
+          const h = handlersRef.current;
+          if (h.isSelectingDestination && h.onMapPress) {
+            h.onMapPress({ latitude: e.lngLat.lat, longitude: e.lngLat.lng });
+          }
+        });
+
+        // Marker taps → detail card (skipped while picking a destination)
+        map.on("click", "havens-point", (e) => {
+          if (handlersRef.current.isSelectingDestination) return;
+          const props = e.features?.[0]?.properties;
+          const place = props && havenByIdRef.current.get(String(props.id));
+          if (!place) return;
+          setSelectedMarker({
+            type: "haven",
+            title: place.title,
+            color: HAVEN_COLOR,
+            rating: place.rating,
+            description: place.description || "Safe haven",
+            location: place.latlng,
+          });
+          setIsMarkerModalVisible(true);
+        });
+        map.on("click", "threats-point", (e) => {
+          if (handlersRef.current.isSelectingDestination) return;
+          const props = e.features?.[0]?.properties;
+          if (!props) return;
+          setSelectedMarker({
+            type: "threat",
+            title: props.title,
+            color: THREAT_COLOR,
+            severity: props.severity,
+            description: props.description,
+          });
+          setIsMarkerModalVisible(true);
+        });
+
+        // Cluster taps → zoom into the cluster
+        ["havens", "threats"].forEach((key) => {
+          map.on("click", `${key}-clusters`, async (e) => {
+            const feature = e.features?.[0];
+            if (!feature) return;
+            const zoom = await map
+              .getSource(key)
+              .getClusterExpansionZoom(feature.properties.cluster_id);
+            map.easeTo({
+              center: feature.geometry.coordinates,
+              zoom: zoom + 0.5,
+              duration: 500,
+            });
           });
         });
-      });
 
-      // Pointer affordances over interactive layers
-      [
-        "havens-point",
-        "threats-point",
-        "havens-clusters",
-        "threats-clusters",
-      ].forEach((layer) => {
-        map.on("mouseenter", layer, () => {
-          if (!handlersRef.current.isSelectingDestination)
-            map.getCanvas().style.cursor = "pointer";
-        });
-        map.on("mouseleave", layer, () => {
-          if (!handlersRef.current.isSelectingDestination)
-            map.getCanvas().style.cursor = "";
-        });
-      });
-
-      // Report bearing to the compass control (throttled via rAF)
-      let rafId = null;
-      const reportCamera = () => {
-        if (rafId) return;
-        rafId = requestAnimationFrame(() => {
-          rafId = null;
-          handlersRef.current.onCameraChanged?.({
-            bearing: map.getBearing(),
-            pitch: map.getPitch(),
+        // Pointer affordances over interactive layers
+        [
+          "havens-point",
+          "threats-point",
+          "havens-clusters",
+          "threats-clusters",
+        ].forEach((layer) => {
+          map.on("mouseenter", layer, () => {
+            if (!handlersRef.current.isSelectingDestination)
+              map.getCanvas().style.cursor = "pointer";
+          });
+          map.on("mouseleave", layer, () => {
+            if (!handlersRef.current.isSelectingDestination)
+              map.getCanvas().style.cursor = "";
           });
         });
-      };
-      map.on("rotate", reportCamera);
-      map.on("pitchend", reportCamera);
 
-      return map;
+        // Report bearing to the compass control (throttled via rAF)
+        let rafId = null;
+        const reportCamera = () => {
+          if (rafId) return;
+          rafId = requestAnimationFrame(() => {
+            rafId = null;
+            handlersRef.current.onCameraChanged?.({
+              bearing: map.getBearing(),
+              pitch: map.getPitch(),
+            });
+          });
+        };
+        map.on("rotate", reportCamera);
+        map.on("pitchend", reportCamera);
+
+        return map;
       };
 
       return () => {
@@ -1038,7 +1047,7 @@ const MapViewComponent = forwardRef(
         activeAnimationRef.current = null;
       }
       try {
-        activeAnimationRef.current = { type: 'routeOverview' };
+        activeAnimationRef.current = { type: "routeOverview" };
         const bounds = new maplibregl.LngLatBounds(
           [origin.longitude, origin.latitude],
           [origin.longitude, origin.latitude],
@@ -1052,7 +1061,7 @@ const MapViewComponent = forwardRef(
           bearing: 0,
         });
       } catch (err) {
-        console.error('Error in routeOverview:', err);
+        console.error("Error in routeOverview:", err);
         activeAnimationRef.current = null;
       }
       // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1078,7 +1087,7 @@ const MapViewComponent = forwardRef(
           activeAnimationRef.current = null;
         }
         try {
-          activeAnimationRef.current = { type: 'navigation' };
+          activeAnimationRef.current = { type: "navigation" };
           map.easeTo({
             center: [origin.longitude, origin.latitude],
             zoom: NAV_CAMERA.zoom,
@@ -1091,7 +1100,7 @@ const MapViewComponent = forwardRef(
             essential: true,
           });
         } catch (err) {
-          console.error('Error in navigation camera:', err);
+          console.error("Error in navigation camera:", err);
           activeAnimationRef.current = null;
         }
       } else if (wasNavigatingRef.current) {
@@ -1102,10 +1111,10 @@ const MapViewComponent = forwardRef(
           activeAnimationRef.current = null;
         }
         try {
-          activeAnimationRef.current = { type: 'exitNavigation' };
+          activeAnimationRef.current = { type: "exitNavigation" };
           map.easeTo({ pitch: 0, bearing: 0, zoom: 16, duration: 700 });
         } catch (err) {
-          console.error('Error exiting navigation:', err);
+          console.error("Error exiting navigation:", err);
           activeAnimationRef.current = null;
         }
       }
@@ -1134,7 +1143,7 @@ const MapViewComponent = forwardRef(
             activeAnimationRef.current = null;
           }
           try {
-            activeAnimationRef.current = { type: 'fitToCoordinates' };
+            activeAnimationRef.current = { type: "fitToCoordinates" };
             const bounds = new maplibregl.LngLatBounds(
               [coordinates[0].longitude, coordinates[0].latitude],
               [coordinates[0].longitude, coordinates[0].latitude],
@@ -1153,7 +1162,7 @@ const MapViewComponent = forwardRef(
               duration: options.animated === false ? 0 : 800,
             });
           } catch (err) {
-            console.error('Error in fitToCoordinates:', err);
+            console.error("Error in fitToCoordinates:", err);
             activeAnimationRef.current = null;
           }
         },
@@ -1180,7 +1189,7 @@ const MapViewComponent = forwardRef(
             if (camera.heading != null) opts.bearing = camera.heading;
             map.easeTo(opts);
           } catch (err) {
-            console.error('Error in animateCamera:', err);
+            console.error("Error in animateCamera:", err);
             activeAnimationRef.current = null;
           }
         },
@@ -1204,7 +1213,7 @@ const MapViewComponent = forwardRef(
             }
             map.easeTo(opts);
           } catch (err) {
-            console.error('Error in animateToRegion:', err);
+            console.error("Error in animateToRegion:", err);
             activeAnimationRef.current = null;
           }
         },

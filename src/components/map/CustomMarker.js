@@ -4,6 +4,7 @@ import { Image, StyleSheet, TouchableOpacity, View } from "react-native";
 // Lookup tables instead of switch functions so we don't rebuild these on every render
 const MARKER_IMAGES = {
   haven: require("../../../assets/markers/haven-marker.png"),
+  normal: require("../../../assets/markers/default-marker.png"),
   threat: require("../../../assets/markers/threat-marker.png"),
   destination: require("../../../assets/markers/destination-marker.png"),
   default: require("../../../assets/markers/default-marker.png"),
@@ -11,6 +12,7 @@ const MARKER_IMAGES = {
 
 const MARKER_COLORS = {
   haven: "#39FF14",
+  normal: "#4F46E5",
   threat: "#FF3131",
   destination: "#FF9900",
   default: "#6C63FF",
