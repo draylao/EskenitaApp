@@ -3,8 +3,8 @@ import { Image, StyleSheet, View } from "react-native";
 import MapView, { Marker, PROVIDER_GOOGLE } from "react-native-maps";
 import MapViewDirections from "react-native-maps-directions";
 import Svg, { Defs, Path, RadialGradient, Stop } from "react-native-svg";
-import CustomMarker from "./CustomMarker";
 import MarkerDetailModal from "../MarkerDetailModal";
+import CustomMarker from "./CustomMarker";
 
 const GOOGLE_MAPS_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
 
@@ -21,13 +21,12 @@ const getOffsetCenter = (location, heading, distance = 0.00045) => {
   const rad = ((heading || 0) * Math.PI) / 180;
 
   return {
-    latitude:
-      location.latitude - distance * Math.cos(rad),
+    latitude: location.latitude - distance * Math.cos(rad),
 
     longitude:
       location.longitude -
       (distance * Math.sin(rad)) /
-      Math.cos((location.latitude * Math.PI) / 180),
+        Math.cos((location.latitude * Math.PI) / 180),
   };
 };
 
@@ -78,6 +77,7 @@ const MapViewComponent = forwardRef(
       userLocation,
       userHeading,
       safeHavens = [],
+      normalPlaces = [],
       userIconType = "circle",
       selectedRouteType,
       onRouteStatsUpdate,
@@ -97,17 +97,17 @@ const MapViewComponent = forwardRef(
     const [isMarkerModalVisible, setIsMarkerModalVisible] = useState(false);
     const [mapRegion, setMapRegion] = useState(null);
     const [zoomLevel, setZoomLevel] = useState(15);
-    const origin = userLocation; // || { latitude: 15.4828, longitude: 120.9749 }// 
+    const origin = userLocation;
 
     const toRad = (value) => (value * Math.PI) / 180;
 
     const routeVector = destination
       ? {
-        x:
-          (destination.longitude - origin.longitude) *
-          Math.cos(toRad((origin.latitude + destination.latitude) / 2)),
-        y: destination.latitude - origin.latitude,
-      }
+          x:
+            (destination.longitude - origin.longitude) *
+            Math.cos(toRad((origin.latitude + destination.latitude) / 2)),
+          y: destination.latitude - origin.latitude,
+        }
       : { x: 0, y: 0 };
 
     const projectionOnRoute = (point) => {
@@ -269,7 +269,8 @@ const MapViewComponent = forwardRef(
         if (!origin) return true;
         const dx = haven.latlng.longitude - origin.longitude;
         const dy = haven.latlng.latitude - origin.latitude;
-        const x = dx * Math.cos(toRad((origin.latitude + haven.latlng.latitude) / 2));
+        const x =
+          dx * Math.cos(toRad((origin.latitude + haven.latlng.latitude) / 2));
         const distToUserKm = Math.sqrt(x * x + dy * dy) * 111.32;
 
         if (distToUserKm <= 0.3) return true;
@@ -519,7 +520,7 @@ const MapViewComponent = forwardRef(
                   title: haven.title,
                   color: "#39FF14",
                   rating: haven.rating,
-                  description: "Safe haven location",
+                  description: haven.description || "Safe haven location",
                   location: haven.latlng,
                 });
                 setIsMarkerModalVisible(true);
@@ -535,7 +536,11 @@ const MapViewComponent = forwardRef(
 
           {/* Render threat pins */}
           {threatPins.map((threat) => {
-            if (!threat.location || !threat.location.latitude || !threat.location.longitude) {
+            if (
+              !threat.location ||
+              !threat.location.latitude ||
+              !threat.location.longitude
+            ) {
               return null;
             }
             return (
@@ -559,10 +564,7 @@ const MapViewComponent = forwardRef(
                   setIsMarkerModalVisible(true);
                 }}
               >
-                <CustomMarker
-                  type="threat"
-                  title={threat.category}
-                />
+                <CustomMarker type="threat" title={threat.category} />
               </Marker>
             );
           })}

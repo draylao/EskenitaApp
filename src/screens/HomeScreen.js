@@ -9,7 +9,15 @@ import {
   X,
 } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Alert, Image, Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import {
+  Alert,
+  Image,
+  Platform,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { GooglePlacesAutocomplete } from "react-native-google-places-autocomplete";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -24,9 +32,12 @@ import WebPlacesSearch from "../components/search/WebPlacesSearch";
 import ThreatReportModal from "../components/ThreatReportModal";
 import { analyzeThreatWithAI } from "../services/MockVertexAi";
 import { fetchDynamicSafeHavens } from "../services/PlacesServices";
+import { fetchMockPlaces as fetchMockPlacesWeb } from "../services/PlacesServices.web";
 import { useTheme } from "../theme/ThemeContext";
 
 const GOOGLE_MAPS_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
+const fetchPlacesForMap =
+  Platform.OS === "web" ? fetchMockPlacesWeb : fetchDynamicSafeHavens;
 
 const HomeScreen = () => {
   const { colors, isDarkMode } = useTheme();
@@ -34,6 +45,7 @@ const HomeScreen = () => {
   const [threatPins, setThreatPins] = useState([]);
   const [destination, setDestination] = useState(null);
   const [dynamicSafeHavens, setDynamicSafeHavens] = useState([]);
+  const [normalPlaces, setNormalPlaces] = useState([]);
   const [searchText, setSearchText] = useState("");
 
   const [isGuardianActive, setIsGuardianActive] = useState(false);
@@ -64,9 +76,11 @@ const HomeScreen = () => {
     return [insets.bottom > 0 ? insets.bottom + 65 : 75];
   }, [insets.bottom]);
 
+  // Within Makati Area 14.56615050040741, 121.0116661247792
+
   const [userLocation, setUserLocation] = useState({
-    latitude: 15.4828,
-    longitude: 120.9749,
+    latitude: 14.56615050040741,
+    longitude: 121.0116661247792,
   });
   const [userHeading, setUserHeading] = useState(0);
   const [userSpeedKmh, setUserSpeedKmh] = useState(0);
@@ -259,16 +273,53 @@ const HomeScreen = () => {
 
   useEffect(() => {
     if (userLocation) {
-      const getJourneySafeHavens = async () => {
+      const getJourneyPlaces = async () => {
         try {
-          // 1. Always fetch safe spots around user's current location
+          if (Platform.OS === "web") {
+            const startPlaces = await fetchMockPlacesWeb(
+              userLocation.latitude,
+              userLocation.longitude,
+            );
+
+            let endPlaces = { safeHavens: [], normalPlaces: [] };
+            if (destination) {
+              endPlaces = await fetchMockPlacesWeb(
+                destination.latitude,
+                destination.longitude,
+              );
+            }
+
+            const combinedSafeHavens = [
+              ...startPlaces.safeHavens,
+              ...endPlaces.safeHavens,
+            ];
+            const combinedNormalPlaces = [
+              ...startPlaces.normalPlaces,
+              ...endPlaces.normalPlaces,
+            ];
+
+            const uniqueSafeHavens = Array.from(
+              new Map(
+                combinedSafeHavens.map((place) => [place.id, place]),
+              ).values(),
+            );
+            const uniqueNormalPlaces = Array.from(
+              new Map(
+                combinedNormalPlaces.map((place) => [place.id, place]),
+              ).values(),
+            );
+
+            setDynamicSafeHavens(uniqueSafeHavens);
+            setNormalPlaces(uniqueNormalPlaces);
+            return;
+          }
+
           const startHavens = await fetchDynamicSafeHavens(
             userLocation.latitude,
             userLocation.longitude,
           );
 
           let endHavens = [];
-          // 2. If a destination is chosen, fetch safe spots around the destination too
           if (destination) {
             endHavens = await fetchDynamicSafeHavens(
               destination.latitude,
@@ -276,19 +327,19 @@ const HomeScreen = () => {
             );
           }
 
-          // 3. Combine and filter out any duplicates by their unique ID
           const combined = [...startHavens, ...endHavens];
           const uniqueHavens = Array.from(
             new Map(combined.map((haven) => [haven.id, haven])).values(),
           );
 
           setDynamicSafeHavens(uniqueHavens);
+          setNormalPlaces([]);
         } catch (err) {
-          console.error("Error aggregating safe havens along route:", err);
+          console.error("Error aggregating places along route:", err);
         }
       };
 
-      getJourneySafeHavens();
+      getJourneyPlaces();
     }
   }, [
     userLocation?.latitude,
@@ -384,6 +435,7 @@ const HomeScreen = () => {
           userLocation={userLocation}
           userHeading={userHeading}
           safeHavens={dynamicSafeHavens}
+          normalPlaces={normalPlaces}
           userIconType={userIconType}
           selectedRouteType={selectedRouteType}
           onRouteStatsUpdate={handleRouteStatsUpdate}
@@ -425,78 +477,79 @@ const HomeScreen = () => {
                   onClear={handleClearRoute}
                 />
               ) : (
-              <GooglePlacesAutocomplete
-                ref={googlePlacesRef}
-                placeholder={
-                  destination ? "Routing to Destination..." : "Search here"
-                }
-                fetchDetails={true} // Crucial to grab the lat/lng details
-                onPress={(data, details = null) => {
-                  if (details) {
-                    setDestination({
-                      latitude: details.geometry.location.lat,
-                      longitude: details.geometry.location.lng,
-                    });
-                    setSelectedRouteType("safe");
-                    setRouteStats({
-                      safe: null,
-                      dangerous: null,
-                      safeAlt: null,
-                    });
-                    googlePlacesRef.current?.blur();
+                <GooglePlacesAutocomplete
+                  ref={googlePlacesRef}
+                  placeholder={
+                    destination ? "Routing to Destination..." : "Search here"
                   }
-                }}
-                onFail={(error) => {
-                  console.error("Google Places API Error:", error);
-                  Alert.alert("API Error", error);
-                }}
-                query={{
-                  key: GOOGLE_MAPS_API_KEY,
-                  language: "en",
-                  components: "country:ph",
-                  location: `${userLocation.latitude},${userLocation.longitude}`,
-                  radius: "10000",
-                  strictbounds: true,
-                }}
-                styles={{
-                  container: { flex: 1 },
-                  textInputContainer: styles.textInputContainer,
-                  textInput: styles.textInput,
-                  listView: destination ? { display: "none" } : styles.listView,
-                  row: styles.searchRow,
-                  description: styles.searchDescription,
-                }}
-                textInputProps={{
-                  multiline: false,
-                  scrollEnabled: false,
-                  numberOfLines: 1,
-                  allowFontScaling: false,
-                  onChangeText: (text) => setSearchText(text),
-                  clearButtonMode: "never",
-                  placeholderTextColor: colors.textSecondary,
-                }}
-                enablePoweredByContainer={false}
-                renderLeftButton={() => (
-                  <View style={styles.searchIconContainer}>
-                    <Search size={22} color={colors.textSecondary} />
-                  </View>
-                )}
-                renderRightButton={() =>
-                  searchText.length > 0 || destination ? (
-                    <TouchableOpacity
-                      style={styles.clearIconContainer}
-                      onPress={handleClearRoute}
-                    >
-                      <X size={22} color={colors.textSecondary} />
-                    </TouchableOpacity>
-                  ) : null
-                }
-              />
+                  fetchDetails={true} // Crucial to grab the lat/lng details
+                  onPress={(data, details = null) => {
+                    if (details) {
+                      setDestination({
+                        latitude: details.geometry.location.lat,
+                        longitude: details.geometry.location.lng,
+                      });
+                      setSelectedRouteType("safe");
+                      setRouteStats({
+                        safe: null,
+                        dangerous: null,
+                        safeAlt: null,
+                      });
+                      googlePlacesRef.current?.blur();
+                    }
+                  }}
+                  onFail={(error) => {
+                    console.error("Google Places API Error:", error);
+                    Alert.alert("API Error", error);
+                  }}
+                  query={{
+                    key: GOOGLE_MAPS_API_KEY,
+                    language: "en",
+                    components: "country:ph",
+                    location: `${userLocation.latitude},${userLocation.longitude}`,
+                    radius: "10000",
+                    strictbounds: true,
+                  }}
+                  styles={{
+                    container: { flex: 1 },
+                    textInputContainer: styles.textInputContainer,
+                    textInput: styles.textInput,
+                    listView: destination
+                      ? { display: "none" }
+                      : styles.listView,
+                    row: styles.searchRow,
+                    description: styles.searchDescription,
+                  }}
+                  textInputProps={{
+                    multiline: false,
+                    scrollEnabled: false,
+                    numberOfLines: 1,
+                    allowFontScaling: false,
+                    onChangeText: (text) => setSearchText(text),
+                    clearButtonMode: "never",
+                    placeholderTextColor: colors.textSecondary,
+                  }}
+                  enablePoweredByContainer={false}
+                  renderLeftButton={() => (
+                    <View style={styles.searchIconContainer}>
+                      <Search size={22} color={colors.textSecondary} />
+                    </View>
+                  )}
+                  renderRightButton={() =>
+                    searchText.length > 0 || destination ? (
+                      <TouchableOpacity
+                        style={styles.clearIconContainer}
+                        onPress={handleClearRoute}
+                      >
+                        <X size={22} color={colors.textSecondary} />
+                      </TouchableOpacity>
+                    ) : null
+                  }
+                />
               )}
             </View>
           </View>
         )}
-
 
         {/* Floating map controls: zoom / compass (web) + recenter */}
         {!isNavigating && (
@@ -512,7 +565,11 @@ const HomeScreen = () => {
         {/* Select Destination Button */}
         {!isNavigating && (
           <TouchableOpacity
-            style={[styles.recenterButton, styles.selectDestinationButton, isSelectingDestination && styles.selectDestinationActive]}
+            style={[
+              styles.recenterButton,
+              styles.selectDestinationButton,
+              isSelectingDestination && styles.selectDestinationActive,
+            ]}
             onPress={() => setIsSelectingDestination(!isSelectingDestination)}
           >
             <Image
@@ -537,7 +594,7 @@ const HomeScreen = () => {
                 styles.toolbarContent,
                 {
                   paddingTop: 12,
-                  paddingBottom: insets.bottom > 0 ? insets.bottom : 12
+                  paddingBottom: insets.bottom > 0 ? insets.bottom : 12,
                 },
               ]}
             >
@@ -551,7 +608,11 @@ const HomeScreen = () => {
               >
                 <Navigation
                   size={22}
-                  color={activeTab === "navigate" ? colors.primary : colors.textSecondary}
+                  color={
+                    activeTab === "navigate"
+                      ? colors.primary
+                      : colors.textSecondary
+                  }
                   style={styles.toolbarIcon}
                 />
                 <Text
@@ -566,7 +627,10 @@ const HomeScreen = () => {
 
               {/* Report Tab */}
               <TouchableOpacity
-                style={[styles.toolbarItem, activeTab === "report" && styles.activeTab]}
+                style={[
+                  styles.toolbarItem,
+                  activeTab === "report" && styles.activeTab,
+                ]}
                 onPress={() => {
                   setActiveTab("report");
                   setIsModalVisible(true);
@@ -574,7 +638,11 @@ const HomeScreen = () => {
               >
                 <TriangleAlert
                   size={22}
-                  color={activeTab === "report" ? colors.primary : colors.textSecondary}
+                  color={
+                    activeTab === "report"
+                      ? colors.primary
+                      : colors.textSecondary
+                  }
                   style={styles.toolbarIcon}
                 />
                 <Text
@@ -589,7 +657,10 @@ const HomeScreen = () => {
 
               {/* Guardian Tab */}
               <TouchableOpacity
-                style={[styles.toolbarItem, activeTab === "guardian" && styles.activeTab]}
+                style={[
+                  styles.toolbarItem,
+                  activeTab === "guardian" && styles.activeTab,
+                ]}
                 onPress={() => {
                   setActiveTab("guardian");
                   handleShareGuardian();
@@ -597,7 +668,11 @@ const HomeScreen = () => {
               >
                 <Users
                   size={22}
-                  color={activeTab === "guardian" ? colors.primary : colors.textSecondary}
+                  color={
+                    activeTab === "guardian"
+                      ? colors.primary
+                      : colors.textSecondary
+                  }
                   style={styles.toolbarIcon}
                 />
                 <Text
@@ -612,7 +687,10 @@ const HomeScreen = () => {
 
               {/* Havens Tab */}
               <TouchableOpacity
-                style={[styles.toolbarItem, activeTab === "havens" && styles.activeTab]}
+                style={[
+                  styles.toolbarItem,
+                  activeTab === "havens" && styles.activeTab,
+                ]}
                 onPress={() => {
                   setActiveTab("havens");
                   setIsHavenSelectorVisible(true);
@@ -620,7 +698,11 @@ const HomeScreen = () => {
               >
                 <ShieldCheck
                   size={22}
-                  color={activeTab === "havens" ? colors.primary : colors.textSecondary}
+                  color={
+                    activeTab === "havens"
+                      ? colors.primary
+                      : colors.textSecondary
+                  }
                   style={styles.toolbarIcon}
                 />
                 <Text
@@ -703,10 +785,7 @@ const HomeScreen = () => {
               style={styles.reportFab}
               onPress={() => setIsModalVisible(true)}
             >
-              <TriangleAlert
-                size={22}
-                color={colors.textPrimary}
-              />
+              <TriangleAlert size={22} color={colors.textPrimary} />
             </TouchableOpacity>
 
             <TouchableOpacity

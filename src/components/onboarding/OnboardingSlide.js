@@ -36,16 +36,29 @@ const OnboardingSlide = ({
         <View style={styles.safeArea}>
           <View style={styles.content}>
             {/* Illustration */}
-            <View style={styles.illustrationContainer}>{renderIllustration()}</View>
+            <View style={styles.illustrationContainer}>
+              {renderIllustration()}
+            </View>
 
             {/* Text Content */}
             <View style={styles.textContainer}>
-              <Text style={[styles.subtitle, { color: colors.primary }]}>{screen.subtitle}</Text>
-              <Text style={[styles.title, { color: colors.textPrimary }]}>{screen.title}</Text>
-              <Text style={[styles.description, { color: colors.textSecondary }]}>
+              <Text style={[styles.subtitle, { color: colors.primary }]}>
+                {screen.subtitle}
+              </Text>
+              <Text style={[styles.title, { color: colors.textPrimary }]}>
+                {screen.title}
+              </Text>
+              <Text
+                style={[styles.description, { color: colors.textSecondary }]}
+              >
                 {screen.description}
               </Text>
-              <Text style={[styles.brandLine, { color: colors.textSecondary, opacity: 0.7 }]}>
+              <Text
+                style={[
+                  styles.brandLine,
+                  { color: colors.textSecondary, opacity: 0.7 },
+                ]}
+              >
                 {screen.brandLine}
               </Text>
             </View>
@@ -58,7 +71,8 @@ const OnboardingSlide = ({
                   style={[
                     styles.indicator,
                     {
-                      backgroundColor: i === index ? colors.primary : colors.border,
+                      backgroundColor:
+                        i === index ? colors.primary : colors.border,
                       width: i === index ? 24 : 8,
                     },
                   ]}
@@ -69,7 +83,11 @@ const OnboardingSlide = ({
             {/* Buttons */}
             <View style={styles.buttonContainer}>
               <TouchableOpacity style={styles.skipButton} onPress={onSkip}>
-                <Text style={[styles.skipText, { color: colors.textSecondary }]}>Skip</Text>
+                <Text
+                  style={[styles.skipText, { color: colors.textSecondary }]}
+                >
+                  Skip
+                </Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -85,16 +103,29 @@ const OnboardingSlide = ({
         <SafeAreaView style={styles.safeArea}>
           <View style={styles.content}>
             {/* Illustration */}
-            <View style={styles.illustrationContainer}>{renderIllustration()}</View>
+            <View style={styles.illustrationContainer}>
+              {renderIllustration()}
+            </View>
 
             {/* Text Content */}
             <View style={styles.textContainer}>
-              <Text style={[styles.subtitle, { color: colors.primary }]}>{screen.subtitle}</Text>
-              <Text style={[styles.title, { color: colors.textPrimary }]}>{screen.title}</Text>
-              <Text style={[styles.description, { color: colors.textSecondary }]}>
+              <Text style={[styles.subtitle, { color: colors.primary }]}>
+                {screen.subtitle}
+              </Text>
+              <Text style={[styles.title, { color: colors.textPrimary }]}>
+                {screen.title}
+              </Text>
+              <Text
+                style={[styles.description, { color: colors.textSecondary }]}
+              >
                 {screen.description}
               </Text>
-              <Text style={[styles.brandLine, { color: colors.textSecondary, opacity: 0.7 }]}>
+              <Text
+                style={[
+                  styles.brandLine,
+                  { color: colors.textSecondary, opacity: 0.7 },
+                ]}
+              >
                 {screen.brandLine}
               </Text>
             </View>
@@ -107,7 +138,8 @@ const OnboardingSlide = ({
                   style={[
                     styles.indicator,
                     {
-                      backgroundColor: i === index ? colors.primary : colors.border,
+                      backgroundColor:
+                        i === index ? colors.primary : colors.border,
                       width: i === index ? 24 : 8,
                     },
                   ]}
@@ -118,7 +150,11 @@ const OnboardingSlide = ({
             {/* Buttons */}
             <View style={styles.buttonContainer}>
               <TouchableOpacity style={styles.skipButton} onPress={onSkip}>
-                <Text style={[styles.skipText, { color: colors.textSecondary }]}>Skip</Text>
+                <Text
+                  style={[styles.skipText, { color: colors.textSecondary }]}
+                >
+                  Skip
+                </Text>
               </TouchableOpacity>
 
               <TouchableOpacity
