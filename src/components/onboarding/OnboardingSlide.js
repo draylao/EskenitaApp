@@ -137,30 +137,35 @@ const OnboardingSlide = ({
 };
 
 const styles = StyleSheet.create({
-  slide: {
-    flex: 1,
-    width: "100%",
-    maxWidth: Platform.OS === "web" ? 600 : undefined,
-    alignSelf: "center",
-  },
-  safeArea: {
-    flex: 1,
-  },
-  content: {
-    flex: 1,
-    paddingHorizontal: 32,
-    paddingTop: Platform.OS === "web" ? 60 : 40,
-    paddingBottom: Platform.OS === "web" ? 60 : 40,
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  illustrationContainer: {
-    flex: 0,
-    justifyContent: "center",
-    alignItems: "center",
-    width: "100%",
-    maxHeight: 240,
-  },
+ slide: {
+  flex: 1,
+  width: "100%",
+  maxWidth: Platform.OS === "web" ? 450 : undefined,
+  alignSelf: "center",
+  height: Platform.OS === "web" ? "100vh" : undefined,   // was maxHeight: "200vh"
+},
+safeArea: {
+  flex: 1,
+},
+content: {
+  flex: 1,
+  paddingHorizontal: 32,
+  paddingTop: Platform.OS === "web" ? 20 : 40,
+  paddingBottom: Platform.OS === "web" ? 20 : 40,
+  justifyContent: "center",   // back to center, this was fine
+  alignItems: "center",
+  height: Platform.OS === "web" ? "100%" : undefined,   // was maxHeight: "100vh"
+},
+   illustrationContainer: {
+  // No `flex: 0` here — on web it becomes flex-basis: 0% and overrides
+  // the fixed height, collapsing the illustration to zero
+  justifyContent: "center",
+  alignItems: "center",
+  width: "100%",
+  height: Platform.OS === "web" ? 180 : 240,
+  flexShrink: 0,
+  overflow: "hidden",
+},
   textContainer: {
     alignItems: "center",
     paddingHorizontal: 8,

@@ -1,6 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useEffect, useState } from "react";
-import { StatusBar, StyleSheet } from "react-native";
+import { Platform, StatusBar, StyleSheet } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import OnboardingScreen from "./src/components/onboarding/OnboardingScreen";
 import HomeScreen from "./src/screens/HomeScreen";
@@ -31,8 +31,13 @@ function AppContent() {
     try {
       const completed = await AsyncStorage.getItem(ONBOARDING_COMPLETED_KEY);
       console.log("Onboarding status from storage:", completed);
-      // Only show onboarding if not completed
-      setShowOnboarding(completed !== "true");
+      // Force show onboarding for web testing - remove this line after testing
+      if (Platform.OS === "web") {
+        await AsyncStorage.removeItem(ONBOARDING_COMPLETED_KEY);
+        setShowOnboarding(true);
+      } else {
+        setShowOnboarding(completed !== "true");
+      }
     } catch (error) {
       console.error("Error checking onboarding status:", error);
       setShowOnboarding(true);
