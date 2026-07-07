@@ -1,7 +1,7 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import React from "react";
 import { Modal, StatusBar, StyleSheet, View } from "react-native";
 import { useTheme } from "../../theme/ThemeContext";
+import { storage } from "../../utils/storage";
 import OnboardingCarousel from "./OnboardingCarousel";
 
 const ONBOARDING_COMPLETED_KEY = "@gabay_onboarding_completed";
@@ -11,29 +11,29 @@ const OnboardingScreen = ({ visible, onComplete, onSkip }) => {
 
   const handleComplete = async () => {
     try {
-      await AsyncStorage.setItem(ONBOARDING_COMPLETED_KEY, "true");
-      console.log("Onboarding completed, saved to storage");
+      await storage.setItem(ONBOARDING_COMPLETED_KEY, "true");
       onComplete();
-    } catch (error) {
-      console.error("Error saving onboarding status:", error);
+    } catch {
       onComplete();
     }
   };
 
   const handleSkip = async () => {
     try {
-      await AsyncStorage.setItem(ONBOARDING_COMPLETED_KEY, "true");
-      console.log("Onboarding skipped, saved to storage");
+      await storage.setItem(ONBOARDING_COMPLETED_KEY, "true");
       onSkip();
-    } catch (error) {
-      console.error("Error saving onboarding status:", error);
+    } catch {
       onSkip();
     }
   };
 
   return (
     <Modal visible={visible} animationType="fade" statusBarTranslucent>
-      <StatusBar barStyle={colors.textPrimary === "#F5F1EC" ? "light-content" : "dark-content"} />
+      <StatusBar
+        barStyle={
+          colors.textPrimary === "#F5F1EC" ? "light-content" : "dark-content"
+        }
+      />
       <View style={[styles.container, { backgroundColor: colors.background }]}>
         <OnboardingCarousel onComplete={handleComplete} onSkip={handleSkip} />
       </View>

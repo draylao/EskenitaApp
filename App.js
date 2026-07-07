@@ -1,10 +1,10 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useEffect, useState } from "react";
 import { StatusBar, StyleSheet } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import OnboardingScreen from "./src/components/onboarding/OnboardingScreen";
 import HomeScreen from "./src/screens/HomeScreen";
 import { ThemeProvider } from "./src/theme/ThemeContext";
+import { storage } from "./src/utils/storage";
 import "./src/utils/webAlertPolyfill";
 
 const ONBOARDING_COMPLETED_KEY = "@gabay_onboarding_completed";
@@ -29,12 +29,9 @@ function AppContent() {
 
   const checkOnboardingStatus = async () => {
     try {
-      const completed = await AsyncStorage.getItem(ONBOARDING_COMPLETED_KEY);
-      console.log("Onboarding status from storage:", completed);
-      // Only show onboarding if not completed
+      const completed = await storage.getItem(ONBOARDING_COMPLETED_KEY);
       setShowOnboarding(completed !== "true");
-    } catch (error) {
-      console.error("Error checking onboarding status:", error);
+    } catch {
       setShowOnboarding(true);
     } finally {
       setIsLoading(false);

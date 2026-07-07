@@ -23,48 +23,130 @@ const throttledFetch = (url, options) => {
   return result;
 };
 
-export const fetchDynamicSafeHavens = (latitude, longitude) => {
-  const cacheKey = `${latitude.toFixed(2)},${longitude.toFixed(2)}`;
-  if (cache.has(cacheKey)) return cache.get(cacheKey);
+const MOCK_WEB_LOCATIONS = [
+  {
+    id: "mock-7-eleven-kingswood",
+    title: "7-Eleven KINGSWOOD (590)",
+    type: "Convenience Store",
+    accessibility: "Open",
+    latlng: { latitude: 14.56691081, longitude: 121.0124584 },
+  },
+  {
+    id: "mock-7-eleven-ocampo",
+    title: "7-Eleven P.Ocampo 2567",
+    type: "Convenience Store",
+    accessibility: "Open",
+    latlng: { latitude: 14.56674106, longitude: 121.0135202 },
+  },
+  {
+    id: "mock-beng-q-store",
+    title: "Beng Q Store",
+    type: "Convenience Store",
+    accessibility: "Open",
+    latlng: { latitude: 14.56635686, longitude: 121.0116749 },
+  },
+  {
+    id: "mock-210-weekend-club",
+    title: "The 210 Weekend Club",
+    type: "Cafe",
+    accessibility: "Closed",
+    latlng: { latitude: 14.56931627, longitude: 121.0114066 },
+  },
+  {
+    id: "mock-pen-coop-cafe",
+    title: "Pen-Coop Cafe",
+    type: "Cafe",
+    accessibility: "Closed",
+    latlng: { latitude: 14.56826147, longitude: 121.009901 },
+  },
+  {
+    id: "mock-nihon-cafe",
+    title: "Nihon Cafe Metropolitan",
+    type: "Cafe",
+    accessibility: "Open",
+    latlng: { latitude: 14.56658792, longitude: 121.0130313 },
+  },
+  {
+    id: "mock-ayat-coffee",
+    title: "Ayat Coffee Bar",
+    type: "Cafe",
+    accessibility: "Closed",
+    latlng: { latitude: 14.5654318, longitude: 121.0134174 },
+  },
+  {
+    id: "mock-siklab-kamagong",
+    title: "Siklab+Kamagong",
+    type: "Asian Restaurant",
+    accessibility: "Closed",
+    latlng: { latitude: 14.56652113, longitude: 121.0088392 },
+  },
+  {
+    id: "mock-mapua-university",
+    title: "Mapua University",
+    type: "Private University",
+    accessibility: "Closed",
+    latlng: { latitude: 14.56660021, longitude: 121.014991 },
+  },
+  {
+    id: "mock-bagtikan",
+    title: "7/11 BAGTIKAN",
+    type: "Convenience Store",
+    accessibility: "Open",
+    latlng: { latitude: 14.56267849, longitude: 121.0108092 },
+  },
+];
 
-  const request = (async () => {
-    try {
-      const radius = 2000; // 2km search area, same as native
-      const query = `[out:json][timeout:15];(
-        node["amenity"~"^(police|cafe|fuel)$"](around:${radius},${latitude},${longitude});
-        node["shop"="convenience"](around:${radius},${latitude},${longitude});
-      );out body 40;`;
+const toRad = (value) => (value * Math.PI) / 180;
 
-      const response = await throttledFetch(
-        "https://overpass-api.de/api/interpreter",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          body: "data=" + encodeURIComponent(query),
-        },
-      );
-      if (!response.ok) {
-        throw new Error(`Overpass returned ${response.status}`);
-      }
-      const data = await response.json();
+const getDistanceKm = (lat1, lon1, lat2, lon2) => {
+  const earthRadiusKm = 6371;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
 
-      return (data.elements || [])
-        .filter((el) => el.tags?.name && el.lat != null && el.lon != null)
-        .map((el) => ({
-          id: String(el.id),
-          title: el.tags.name,
-          latlng: { latitude: el.lat, longitude: el.lon },
-          // OSM has no ratings; derive a stable demo value (3.8–4.9 range)
-          rating: Math.round((3.8 + (el.id % 12) / 10) * 10) / 10,
-        }));
-    } catch (error) {
-      console.error("Error fetching dynamic safety anchors (web):", error);
-      // Forget the failed attempt so a later retry can succeed
-      cache.delete(cacheKey);
-      return [];
-    }
-  })();
+  return earthRadiusKm * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
+};
 
-  cache.set(cacheKey, request);
-  return request;
+const isSafeHaven = (place) => {
+  const normalizedType = (place.type || "").toLowerCase();
+  return (
+    normalizedType.includes("convenience") || normalizedType.includes("cafe")
+  );
+};
+
+export const fetchMockPlaces = async (latitude, longitude) => {
+  const nearbyPlaces = MOCK_WEB_LOCATIONS.filter((place) => {
+    const distanceKm = getDistanceKm(
+      latitude,
+      longitude,
+      place.latlng.latitude,
+      place.latlng.longitude,
+    );
+
+    return distanceKm <= 2.5;
+  }).map((place) => ({
+    id: place.id,
+    title: place.title,
+    category: place.type,
+    accessibility: place.accessibility,
+    latlng: place.latlng,
+    rating: isSafeHaven(place) ? 4.6 : 4.0,
+    type: isSafeHaven(place) ? "safe_haven" : "normal",
+    description: isSafeHaven(place)
+      ? "Trusted public stop marked as a safe haven"
+      : "Regular place users can visit",
+  }));
+
+  return {
+    safeHavens: nearbyPlaces.filter((place) => place.type === "safe_haven"),
+    normalPlaces: nearbyPlaces.filter((place) => place.type === "normal"),
+    allPlaces: nearbyPlaces,
+  };
+};
+
+export const fetchDynamicSafeHavens = async (latitude, longitude) => {
+  const { safeHavens } = await fetchMockPlaces(latitude, longitude);
+  return safeHavens;
 };

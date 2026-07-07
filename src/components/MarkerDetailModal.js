@@ -13,6 +13,7 @@ import ShieldIcon from "./icons/ShieldIcon";
 
 const TYPE_LABELS = {
   haven: "Safe Haven",
+  normal: "Normal Place",
   threat: "Reported Threat",
   destination: "Destination",
 };
