@@ -1,10 +1,14 @@
 import React from "react";
-import { Platform, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Image, Platform, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useTheme } from "../../theme/ThemeContext";
-import CommunityIllustration from "./illustrations/CommunityIllustration";
-import ConnectedIllustration from "./illustrations/ConnectedIllustration";
-import SafeRoutesIllustration from "./illustrations/SafeRoutesIllustration";
-import WelcomeIllustration from "./illustrations/WelcomeIllustration";
+
+// Slide artwork, numbered by slide order (1 = welcome … 4 = community)
+const ILLUSTRATION_IMAGES = {
+  welcome: require("../../../assets/onboarding picture/1.png"),
+  "safe-routes": require("../../../assets/onboarding picture/2.png"),
+  connected: require("../../../assets/onboarding picture/3.png"),
+  community: require("../../../assets/onboarding picture/4.png"),
+};
 
 const OnboardingSlide = ({
   screen,
@@ -16,20 +20,15 @@ const OnboardingSlide = ({
 }) => {
   const { colors } = useTheme();
 
-  const renderIllustration = () => {
-    switch (screen.illustration) {
-      case "welcome":
-        return <WelcomeIllustration colors={colors} />;
-      case "safe-routes":
-        return <SafeRoutesIllustration colors={colors} />;
-      case "connected":
-        return <ConnectedIllustration colors={colors} />;
-      case "community":
-        return <CommunityIllustration colors={colors} />;
-      default:
-        return <WelcomeIllustration colors={colors} />;
-    }
-  };
+  const renderIllustration = () => (
+    <Image
+      source={
+        ILLUSTRATION_IMAGES[screen.illustration] || ILLUSTRATION_IMAGES.welcome
+      }
+      style={styles.illustrationImage}
+      resizeMode="contain"
+    />
+  );
 
   return (
     <View style={styles.slide}>
@@ -162,9 +161,14 @@ content: {
   justifyContent: "center",
   alignItems: "center",
   width: "100%",
-  height: Platform.OS === "web" ? 180 : 240,
+  height: Platform.OS === "web" ? 200 : 240,
   flexShrink: 0,
   overflow: "hidden",
+},
+illustrationImage: {
+  width: "100%",
+  height: "100%",
+  borderRadius: 16,
 },
   textContainer: {
     alignItems: "center",
