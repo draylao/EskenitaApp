@@ -1,28 +1,27 @@
 import BottomSheet, { BottomSheetView } from "@gorhom/bottom-sheet";
 import * as Location from "expo-location";
 import {
-  Navigation,
-  Search,
-  ShieldCheck,
-  TriangleAlert,
-  Users,
-  X,
+    Navigation,
+    Search,
+    ShieldCheck,
+    TriangleAlert,
+    Users,
+    X,
 } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Alert, Image, Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { GooglePlacesAutocomplete } from "react-native-google-places-autocomplete";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import MapControls from "../components/controls/MapControls";
 import GuardianProtectionPanel from "../components/GuardianProtectionPanel";
 import HavenSelectorModal from "../components/HavenSelectorModal";
-import MapControls from "../components/controls/MapControls";
 import MapViewComponent from "../components/map/MapView";
 import NavigationHud from "../components/NavigationHud";
+import ProfileMenu from "../components/ProfileMenu";
 import RouteComparisonPanel from "../components/RouteComparisonPanel";
-import ThemeToggleButton from "../components/ThemeToggleButton";
-import ThreatReportModal from "../components/ThreatReportModal";
-import UserIconPicker from "../components/UserIconPicker";
 import WebPlacesSearch from "../components/search/WebPlacesSearch";
+import ThreatReportModal from "../components/ThreatReportModal";
 import { analyzeThreatWithAI } from "../services/MockVertexAi";
 import { fetchDynamicSafeHavens } from "../services/PlacesServices";
 import { useTheme } from "../theme/ThemeContext";
@@ -43,7 +42,7 @@ const HomeScreen = () => {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isSosTriggered, setIsSosTriggered] = useState(false);
   const [activeTab, setActiveTab] = useState("navigate");
-  const [isIconPickerVisible, setIsIconPickerVisible] = useState(false);
+  const [isProfileMenuVisible, setIsProfileMenuVisible] = useState(false);
   const [userIconType, setUserIconType] = useState("circle");
   const [selectedRouteType, setSelectedRouteType] = useState("safe");
   const [routeStats, setRouteStats] = useState({
@@ -481,10 +480,6 @@ const HomeScreen = () => {
           </View>
         )}
 
-        {/* Theme Toggle Button */}
-        {!isNavigating && (
-          <ThemeToggleButton style={styles.themeToggleButton} />
-        )}
 
         {/* Floating map controls: zoom / compass (web) + recenter */}
         {!isNavigating && (
@@ -621,23 +616,23 @@ const HomeScreen = () => {
                 </Text>
               </TouchableOpacity>
 
-              {/* Customize Icon Button */}
+              {/* Profile Button */}
               <TouchableOpacity
                 style={styles.toolbarItem}
-                onPress={() => setIsIconPickerVisible(true)}
+                onPress={() => setIsProfileMenuVisible(true)}
               >
-                <View style={styles.customizeIconPreview}>
+                <View style={styles.profileIconPreview}>
                   {userIconType === "circle" ? (
-                    <View style={styles.customizeIconDot} />
+                    <View style={styles.profileIconDot} />
                   ) : (
                     <Image
                       source={require("../../assets/user-icons/triangle-icon.png")}
-                      style={styles.customizeIconImage}
+                      style={styles.profileIconImage}
                       resizeMode="contain"
                     />
                   )}
                 </View>
-                <Text style={styles.toolbarLabel}>Icon</Text>
+                <Text style={styles.toolbarLabel}>Profile</Text>
               </TouchableOpacity>
             </BottomSheetView>
           </BottomSheet>
@@ -651,11 +646,11 @@ const HomeScreen = () => {
           onSubmit={handleReportThreat}
         />
 
-        <UserIconPicker
-          visible={isIconPickerVisible}
-          onClose={() => setIsIconPickerVisible(false)}
-          onSelect={(iconType) => setUserIconType(iconType)}
-          currentIcon={userIconType}
+        <ProfileMenu
+          visible={isProfileMenuVisible}
+          onClose={() => setIsProfileMenuVisible(false)}
+          userIconType={userIconType}
+          onIconChange={setUserIconType}
         />
 
         <HavenSelectorModal
@@ -880,18 +875,22 @@ const createStyles = (colors) =>
       color: colors.primary,
       fontWeight: "600",
     },
-    customizeIconPreview: {
+    profileIconPreview: {
       width: 24,
       height: 24,
       justifyContent: "center",
       alignItems: "center",
       marginBottom: 2,
     },
-    customizeIconDot: {
+    profileIconDot: {
       width: 16,
       height: 16,
       borderRadius: 8,
       backgroundColor: colors.primary,
+    },
+    profileIconImage: {
+      width: 20,
+      height: 20,
     },
     trianglePreview: {
       borderRadius: 0,
@@ -909,12 +908,6 @@ const createStyles = (colors) =>
       borderRadius: 0,
       transform: [{ rotate: "45deg" }],
       backgroundColor: "#FF6B6B",
-    },
-    themeToggleButton: {
-      position: "absolute",
-      top: 120,
-      left: 16,
-      zIndex: 10,
     },
     recenterButton: {
       position: "absolute",
