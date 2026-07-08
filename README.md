@@ -39,6 +39,6 @@ This project was developed as part of **SparkFest 2026**, the flagship hackathon
 
 ## Repository Information
 
-- **Live Demo:** [Gabay Live Demo](https://eskenita-app.vercel.app/?fbclid=IwY2xjawS6y9pleHRuA2FlbQIxMABicmlkETFyRGlUMW5WZktDRmIzMEcyc3J0YwZhcHBfaWQQMjIyMDM5MTc4ODIwMDg5MgABHlbmhOSz6Te0bStyVXDQ8ydFzNcOQBgCJn5NrwR0RwCQuy5OUeGpRAzy0KOX_aem_p-aVmdOf7BmQYbXczpSKNA)
+- **Live Demo:** [Gabay Live Demo](https://eskenita-app.vercel.app/?fbclid=IwY2xjawS64UpleHRuA2FlbQIxMABicmlkETFyRGlUMW5WZktDRmIzMEcyc3J0YwZhcHBfaWQQMjIyMDM5MTc4ODIwMDg5MgABHgZm7k5HTZbSxdb_-AuIu2ESW6KkAiFVl77TTGfN8nBfYJXDVkkMM9Xv5CX2_aem_5vwqmDAmQ-ULFiKVU-7H9w)
 - **Presentation Deck:** [Gabay Presentation](https://www.canva.com/design/DAHOmCTqrZk/170hqcJykdv-wR5hoxlxmA/edit)
 - **Project Document:** [Gabay Project Documentation](https://docs.google.com/document/d/1TpKMAEMRS8avZ1bdls7VJZtgME3HfRLha0FN5wp2puI/edit?tab=t.nxk68qgtsm6n#heading=h.4xevif2xjjfp)
