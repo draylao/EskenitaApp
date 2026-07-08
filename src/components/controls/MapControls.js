@@ -35,7 +35,17 @@ const MapControls = ({ mapRef, bearing = 0, onRecenter, colors, isDarkMode }) =>
       <BlurView
         intensity={45}
         tint={isDarkMode ? "dark" : "light"}
-        style={[styles.stack, { borderColor: colors?.border }]}
+        style={[
+          styles.stack,
+          {
+            borderColor: colors?.border,
+            // Glass surface must follow the theme — a dark pill with dark
+            // icons is invisible in light mode
+            backgroundColor: isDarkMode
+              ? "rgba(20, 18, 15, 0.35)"
+              : "rgba(255, 255, 255, 0.7)",
+          },
+        ]}
       >
         {isWeb && (
           <>
@@ -81,8 +91,6 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     borderWidth: 1,
     overflow: "hidden",
-    // Slight translucency behind the blur for the glass effect
-    backgroundColor: "rgba(20, 18, 15, 0.35)",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,

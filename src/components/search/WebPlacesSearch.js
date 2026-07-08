@@ -128,7 +128,9 @@ const WebPlacesSearch = ({
         ) : null}
       </View>
 
-      {!hasDestination && results.length > 0 && (
+      {/* Show suggestions whenever there are results — even mid-route, so
+          typing a new place works without clearing the destination first */}
+      {results.length > 0 && (
         <ScrollView
           style={styles.listView}
           keyboardShouldPersistTaps="handled"

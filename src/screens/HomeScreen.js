@@ -572,10 +572,13 @@ const HomeScreen = () => {
             ]}
             onPress={() => setIsSelectingDestination(!isSelectingDestination)}
           >
-            <Image
-              source={require("../../assets/markers/destination-marker.png")}
-              style={styles.destinationButtonIcon}
-              resizeMode="contain"
+            <Navigation
+              size={24}
+              // Active: white on the orange button. Idle: theme text color
+              // on the card button (hardcoded white was invisible on the
+              // near-white card in light mode)
+              color={isSelectingDestination ? "#FFFFFF" : colors.textPrimary}
+              strokeWidth={2.5}
             />
           </TouchableOpacity>
         )}
@@ -856,7 +859,7 @@ const createStyles = (colors) =>
     sosBackground: { backgroundColor: "rgba(255,0,0,0.4)" },
     searchContainer: {
       position: "absolute",
-      top: 60,
+      top: 10,
       left: 16,
       right: 16,
       flexDirection: "column",

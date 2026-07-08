@@ -197,7 +197,8 @@ const createStyles = (colors) =>
   StyleSheet.create({
     container: {
       position: "absolute",
-      bottom: 90,
+      // Flush on the bottom toolbar, same as the route panel
+      bottom: 75,
       left: 0,
       right: 0,
       zIndex: 15,
@@ -205,12 +206,12 @@ const createStyles = (colors) =>
       borderTopLeftRadius: 20,
       borderTopRightRadius: 20,
       paddingHorizontal: 16,
-      paddingTop: 16,
-      paddingBottom: 14,
+      paddingTop: 12,
+      paddingBottom: 12,
       borderWidth: 1.5,
       borderColor: colors.border,
       borderBottomWidth: 0,
-      gap: 12,
+      gap: 8,
       shadowColor: "#000",
       shadowOffset: { width: 0, height: -4 },
       shadowOpacity: 0.5,

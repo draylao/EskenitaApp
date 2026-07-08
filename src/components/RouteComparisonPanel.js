@@ -309,7 +309,9 @@ const createStyles = (colors) =>
   StyleSheet.create({
     container: {
       position: "absolute",
-      bottom: 90,
+      // Sits flush on the bottom toolbar so the sheet reads as a compact
+      // extension of the nav bar instead of a floating block
+      bottom: 75,
       left: 0,
       right: 0,
       zIndex: 15,
@@ -354,11 +356,11 @@ const createStyles = (colors) =>
       flexDirection: "row",
       backgroundColor: colors.card,
       paddingHorizontal: 16,
-      paddingTop: 6,
+      paddingTop: 4,
       gap: 4,
     },
     tab: {
-      paddingVertical: 8,
+      paddingVertical: 5,
       paddingHorizontal: 20,
       borderTopLeftRadius: 10,
       borderTopRightRadius: 10,
@@ -377,14 +379,15 @@ const createStyles = (colors) =>
     listView: {
       backgroundColor: colors.card,
       paddingHorizontal: 12,
-      paddingBottom: 8,
-      gap: 6,
+      paddingBottom: 6,
+      gap: 4,
     },
     listItem: {
       flexDirection: "row",
       backgroundColor: colors.surface,
       borderRadius: 12,
-      padding: 12,
+      paddingVertical: 8,
+      paddingHorizontal: 12,
       alignItems: "center",
       borderWidth: 1,
       borderColor: colors.border,
@@ -398,7 +401,7 @@ const createStyles = (colors) =>
     },
     listIndicator: {
       width: 4,
-      height: 36,
+      height: 30,
       borderRadius: 2,
       marginRight: 12,
     },
@@ -437,8 +440,8 @@ const createStyles = (colors) =>
     },
     routeCardsRow: {
       backgroundColor: colors.card,
-      paddingTop: 8,
-      paddingBottom: 4,
+      paddingTop: 6,
+      paddingBottom: 2,
     },
     routeCardsContent: {
       paddingHorizontal: 8,
@@ -447,7 +450,7 @@ const createStyles = (colors) =>
     },
     routeCard: {
       minWidth: 110,
-      paddingVertical: 10,
+      paddingVertical: 7,
       paddingHorizontal: 14,
       borderRadius: 10,
       alignItems: "center",
@@ -478,7 +481,7 @@ const createStyles = (colors) =>
     },
     routeDuration: {
       color: colors.textPrimary,
-      fontSize: 20,
+      fontSize: 17,
       fontWeight: "700",
     },
     routeDurationSelected: {
@@ -512,7 +515,7 @@ const createStyles = (colors) =>
       flexDirection: "row",
       alignItems: "center",
       backgroundColor: colors.surface,
-      paddingVertical: 10,
+      paddingVertical: 7,
       paddingHorizontal: 16,
       borderTopWidth: 1,
       borderTopColor: colors.border,
@@ -525,7 +528,7 @@ const createStyles = (colors) =>
     },
     goButton: {
       backgroundColor: colors.primary,
-      paddingVertical: 16,
+      paddingVertical: 12,
       alignItems: "center",
       borderTopWidth: 1,
       borderTopColor: colors.border,

@@ -43,21 +43,15 @@ const DARK_STYLE =
 const LIGHT_STYLE =
   "https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json";
 
+// Use actual PNG files where they exist, SVG for missing ones
 const ICONS = {
-  "haven-icon": Asset.fromModule(
-    require("../../../assets/markers/haven-marker.png"),
-  ).uri,
-  "threat-icon": Asset.fromModule(
-    require("../../../assets/markers/threat-marker.png"),
-  ).uri,
+  "haven-icon": Asset.fromModule(require("../../../assets/markers/haven-marker.png")).uri,
+  "threat-icon": Asset.fromModule(require("../../../assets/markers/threat-marker.png")).uri,
 };
 
-const DESTINATION_ICON_URI = Asset.fromModule(
-  require("../../../assets/markers/destination-marker.png"),
-).uri;
-const USER_TRIANGLE_URI = Asset.fromModule(
-  require("../../../assets/user-icons/triangle-icon.png"),
-).uri;
+// SVG for destination (PNG missing)
+const DESTINATION_ICON_URI = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 24 24'%3E%3Cpath d='M4 15s1-1 4-1 5 2 8 2 4-1 4-1V6s-1 1-4 1-5-2-8-2-4 1-4 1z' fill='%23FF9900' stroke='white' stroke-width='2'/%3E%3Cpath d='M4 22v-7' stroke='white' stroke-width='2'/%3E%3C/svg%3E";
+const USER_TRIANGLE_URI = Asset.fromModule(require("../../../assets/user-icons/triangle-icon.png")).uri;
 
 const HAVEN_COLOR = "#39FF14";
 const THREAT_COLOR = "#FF3131";
@@ -146,7 +140,7 @@ const mapOsrmStep = (step) => {
 
 const fetchOsrmRoute = async (points) => {
   const coordStr = points.map((p) => `${p.longitude},${p.latitude}`).join(";");
-  const url = `${OSRM_BASE}/${coordStr}?overview=full&geometries=geojson&steps=true`;
+  const url = `${OSRM_BASE}/${coordStr}?overview=full&geometries=geojson&steps=true&alternatives=false`;
   const response = await fetch(url);
   const data = await response.json();
   if (data.code !== "Ok" || !data.routes?.length) {
@@ -197,14 +191,20 @@ const buildUserElement = ({ userIconType, isNavigating, coneColor }) => {
   return el;
 };
 
-const buildDestinationElement = () => {
+const buildDestinationElement = (colors) => {
   const el = document.createElement("div");
   el.style.cssText = "cursor:pointer;";
+  const isDark = colors?.background === "#15120F";
+  const bgColor = isDark ? colors?.card || "#241F1A" : "#FFFFFF";
+  const borderColor = "#FF9900";
   el.innerHTML = `
-    <div style="width:48px;height:48px;border-radius:50%;background:#FFFFFF;
-      border:3px solid #FF9900;display:flex;align-items:center;justify-content:center;
-      box-shadow:0 4px 10px rgba(0,0,0,0.35);box-sizing:border-box;">
-      <img src="${DESTINATION_ICON_URI}" style="width:38px;height:38px;object-fit:contain;" draggable="false"/>
+    <div style="width:48px;height:48px;border-radius:50%;background:${bgColor};
+      border:4px solid ${borderColor};display:flex;align-items:center;justify-content:center;
+      box-shadow:0 4px 12px rgba(255,153,0,0.4),0 2px 4px rgba(0,0,0,0.3);box-sizing:border-box;">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="${borderColor}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V6s-1 1-4 1-5-2-8-2-4 1-4 1z"/>
+        <path d="M4 22v-7"/>
+      </svg>
     </div>`;
   return el;
 };
@@ -341,92 +341,94 @@ const MapViewComponent = forwardRef(
       return Math.sqrt(dx * dx + dy * dy) * 111.32; // km per degree
     };
 
+    // Which side of the direct corridor a point sits on (+1/-1) — used to
+    // send the alternative route down the other side so it looks different
+    const sideOfRoute = (point) => {
+      if (!destination) return 1;
+      const pointVec = {
+        x:
+          (point.longitude - origin.longitude) *
+          Math.cos(toRad((origin.latitude + destination.latitude) / 2)),
+        y: point.latitude - origin.latitude,
+      };
+      const cross = routeVector.x * pointVec.y - routeVector.y * pointVec.x;
+      return cross >= 0 ? 1 : -1;
+    };
+
     const forwardHavens = safeHavens
       .map((haven) => ({
         ...haven,
         projection: projectionOnRoute(haven.latlng),
         distanceFromRoute: distanceToRoute(haven.latlng),
+        side: sideOfRoute(haven.latlng),
       }))
       .filter(({ projection }) => projection > 0.05 && projection < 0.95);
 
+    // Keep safe routes SHORT: with dense demo havens, forcing the route
+    // through one haven per progress-window made OSRM produce sightseeing
+    // tours. Instead pick at most two havens that hug the direct corridor,
+    // visited in travel order (no backtracking).
     const balancedSafeWaypoints = useMemo(() => {
       if (!destination || forwardHavens.length === 0) return [];
-      const MAX_DETOUR_THRESHOLD = 0.25;
-      const PROGRESS_WINDOW_STRIDE = 0.2;
+      const MAX_DETOUR_KM = 0.12;
+      const MAX_WAYPOINTS = 2;
 
-      const linearCorridorSpots = forwardHavens
-        .filter((haven) => haven.distanceFromRoute <= MAX_DETOUR_THRESHOLD)
-        .sort((a, b) => a.projection - b.projection);
-
-      const smoothedWaypoints = [];
-      let currentWindowEnd = PROGRESS_WINDOW_STRIDE;
-      let bestSpotInWindow = null;
-
-      for (const spot of linearCorridorSpots) {
-        while (spot.projection > currentWindowEnd) {
-          if (bestSpotInWindow) {
-            smoothedWaypoints.push(bestSpotInWindow.latlng);
-            bestSpotInWindow = null;
-          }
-          currentWindowEnd += PROGRESS_WINDOW_STRIDE;
-        }
-        if (
-          !bestSpotInWindow ||
-          spot.distanceFromRoute < bestSpotInWindow.distanceFromRoute
-        ) {
-          bestSpotInWindow = spot;
-        }
-      }
-      if (bestSpotInWindow) smoothedWaypoints.push(bestSpotInWindow.latlng);
-      return smoothedWaypoints;
+      return forwardHavens
+        .filter((haven) => haven.distanceFromRoute <= MAX_DETOUR_KM)
+        .sort((a, b) => a.distanceFromRoute - b.distanceFromRoute)
+        .slice(0, MAX_WAYPOINTS)
+        .sort((a, b) => a.projection - b.projection)
+        .map((haven) => haven.latlng);
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [JSON.stringify(forwardHavens), destination]);
 
+    // Alternative route: one haven NOT used by the primary route, ideally
+    // on the OTHER side of the corridor so the two safe paths visibly split
     const alternativeSafeWaypoints = useMemo(() => {
       if (!destination || forwardHavens.length === 0) return [];
-      const MAX_DETOUR_THRESHOLD = 0.4;
-      const PROGRESS_WINDOW_STRIDE = 0.2;
+      const MAX_DETOUR_KM = 0.3;
 
-      const linearCorridorSpots = forwardHavens
-        .filter((haven) => haven.distanceFromRoute <= MAX_DETOUR_THRESHOLD)
-        .sort((a, b) => a.projection - b.projection);
+      const primaryPicks = forwardHavens
+        .filter((haven) => haven.distanceFromRoute <= 0.12)
+        .sort((a, b) => a.distanceFromRoute - b.distanceFromRoute)
+        .slice(0, 2);
+      const primaryIds = new Set(primaryPicks.map((h) => String(h.id)));
+      const primarySide = primaryPicks[0]?.side ?? 1;
 
-      const primaryIds = new Set(
-        balancedSafeWaypoints.map((w) => `${w.latitude}-${w.longitude}`),
+      const candidates = forwardHavens.filter(
+        (haven) =>
+          !primaryIds.has(String(haven.id)) &&
+          haven.distanceFromRoute <= MAX_DETOUR_KM,
       );
-      const smoothedWaypoints = [];
-      let currentWindowEnd = PROGRESS_WINDOW_STRIDE;
-      let alternativeSpotInWindow = null;
+      const oppositeSide = candidates.filter((h) => h.side !== primarySide);
+      const pool = oppositeSide.length > 0 ? oppositeSide : candidates;
 
-      for (const spot of linearCorridorSpots) {
-        if (primaryIds.has(`${spot.latlng.latitude}-${spot.latlng.longitude}`))
-          continue;
-        while (spot.projection > currentWindowEnd) {
-          if (alternativeSpotInWindow) {
-            smoothedWaypoints.push(alternativeSpotInWindow.latlng);
-            alternativeSpotInWindow = null;
-          }
-          currentWindowEnd += PROGRESS_WINDOW_STRIDE;
-        }
-        if (
-          !alternativeSpotInWindow ||
-          spot.distanceFromRoute < alternativeSpotInWindow.distanceFromRoute
-        ) {
-          alternativeSpotInWindow = spot;
-        }
-      }
-      if (alternativeSpotInWindow)
-        smoothedWaypoints.push(alternativeSpotInWindow.latlng);
+      const picks = pool
+        .sort((a, b) => a.distanceFromRoute - b.distanceFromRoute)
+        .slice(0, 1)
+        .map((haven) => haven.latlng);
 
-      if (smoothedWaypoints.length === 0 && balancedSafeWaypoints.length > 0) {
+      if (picks.length === 0 && balancedSafeWaypoints.length > 0) {
+        // Offset primary slightly to avoid drawing two identical lines
         return balancedSafeWaypoints.map((w) => ({
           latitude: w.latitude + 0.0004,
           longitude: w.longitude + 0.0004,
         }));
       }
-      return smoothedWaypoints;
+      return picks;
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [JSON.stringify(forwardHavens), destination, balancedSafeWaypoints]);
+
+    // Ordered pool of single-haven detours (closest to the corridor first)
+    // used as retry candidates when two routes snap onto the same line
+    const distinctCandidatePool = useMemo(() => {
+      if (!destination) return [];
+      return forwardHavens
+        .filter((haven) => haven.distanceFromRoute <= 0.35)
+        .sort((a, b) => a.distanceFromRoute - b.distanceFromRoute)
+        .map((haven) => haven.latlng);
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [JSON.stringify(forwardHavens), destination]);
 
     const visiblePlaces = useMemo(() => {
       return safeHavens.filter((place) => {
@@ -527,6 +529,17 @@ const MapViewComponent = forwardRef(
         if (!map.getLayer(`route-${type}`)) return;
         const selected = selectedRouteTypeRef.current === type;
         const [strong, light] = routePalette(type);
+
+        if (type === "dangerous") {
+          // Always fully visible, but dashed — reads as "blocked/dangerous"
+          // next to the solid safe routes (it can never be selected)
+          map.setPaintProperty(`route-${type}`, "line-color", strong);
+          map.setPaintProperty(`route-${type}`, "line-width", 5);
+          map.setPaintProperty(`route-${type}`, "line-dasharray", [2, 1.8]);
+          map.setPaintProperty(`route-${type}-casing`, "line-opacity", 0);
+          return;
+        }
+
         map.setPaintProperty(
           `route-${type}`,
           "line-color",
@@ -549,6 +562,7 @@ const MapViewComponent = forwardRef(
         "Open Sans Regular",
       ];
 
+      // Load marker images into MapLibre
       for (const [name, uri] of Object.entries(ICONS)) {
         if (!map.hasImage(name)) {
           try {
@@ -664,7 +678,7 @@ const MapViewComponent = forwardRef(
             paint: { "text-color": isDark ? "#FFFFFF" : "#1F1F1F" },
           });
         }
-        // Individual points: white badge circle + the PNG icon on top
+        // Individual points: white badge circle + the icon on top
         if (!map.getLayer(`${key}-point-bg`)) {
           map.addLayer({
             id: `${key}-point-bg`,
@@ -687,7 +701,7 @@ const MapViewComponent = forwardRef(
             filter: ["!", ["has", "point_count"]],
             layout: {
               "icon-image": icon,
-              "icon-size": iconSizesRef.current[icon] || 0.1,
+              "icon-size": iconSizesRef.current[icon] || 0.5,
               "icon-allow-overlap": true,
             },
           });
@@ -926,7 +940,7 @@ const MapViewComponent = forwardRef(
       destMarkerRef.current = null;
       if (!destination) return;
 
-      const el = buildDestinationElement();
+      const el = buildDestinationElement(colors);
       el.addEventListener("click", (e) => {
         e.stopPropagation();
         if (handlersRef.current.isSelectingDestination) return;
@@ -945,7 +959,7 @@ const MapViewComponent = forwardRef(
         .setLngLat([destination.longitude, destination.latitude])
         .addTo(map);
       // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [destination?.latitude, destination?.longitude, mapInstance]);
+    }, [destination?.latitude, destination?.longitude, mapInstance, colors]);
 
     // ------------------------------------------------------------------
     // Routes (OSRM): dangerous = direct, safe/safeAlt = via haven waypoints
@@ -978,14 +992,78 @@ const MapViewComponent = forwardRef(
       const load = async () => {
         const definitions = [
           ["dangerous", [origin, destination]],
-          ["safe", [origin, ...balancedSafeWaypoints, destination]],
-          ["safeAlt", [origin, ...alternativeSafeWaypoints, destination]],
+          ["safe", balancedSafeWaypoints],
+          ["safeAlt", alternativeSafeWaypoints],
         ];
+        // Direct route length, used to cap how much detour a "safe" route
+        // may add before we drop haven waypoints (keeps demo routes short)
+        let directKm = null;
+        const detourBudget = () =>
+          directKm != null ? directKm * 1.35 + 0.15 : Infinity;
+
+        // Geometries already drawn — used to guarantee the three routes
+        // never end up as the same overlapping line with the same length
+        const geomKey = (r) => JSON.stringify(r.geometry.coordinates);
+        const usedGeoms = new Set();
+
+        // Fetch a route, dropping waypoints while it's over budget — but
+        // always keeping at least ONE waypoint for safe routes
+        const fetchTrimmed = async (routePoints, isSafe) => {
+          let pts = routePoints;
+          let route = await fetchOsrmRoute(pts);
+          while (
+            !cancelled &&
+            isSafe &&
+            route.distanceKm > detourBudget() &&
+            pts.length > 3
+          ) {
+            pts = [...pts.slice(0, pts.length - 2), pts[pts.length - 1]];
+            route = await fetchOsrmRoute(pts);
+          }
+          return route;
+        };
+
+        // Fetch a safe route; if OSRM snaps it onto a line we already
+        // drew (identical geometry = identical length), retry with other
+        // nearby havens until it's visibly distinct
+        const fetchDistinct = async (waypoints) => {
+          let route = await fetchTrimmed(
+            [origin, ...waypoints, destination],
+            true,
+          );
+          if (!usedGeoms.has(geomKey(route))) return route;
+
+          let tries = 0;
+          for (const candidate of distinctCandidatePool) {
+            if (cancelled || tries >= 3) break;
+            const alreadyUsed = waypoints.some(
+              (w) =>
+                w.latitude === candidate.latitude &&
+                w.longitude === candidate.longitude,
+            );
+            if (alreadyUsed) continue;
+            tries += 1;
+            const retry = await fetchTrimmed(
+              [origin, candidate, destination],
+              true,
+            );
+            if (!usedGeoms.has(geomKey(retry))) return retry;
+          }
+          return route; // road network offers nothing more distinct
+        };
+
         // Sequential on purpose — the public OSRM demo server rate-limits
-        for (const [type, points] of definitions) {
+        for (const [type, pointsOrWaypoints] of definitions) {
           try {
-            const route = await fetchOsrmRoute(points);
+            let route;
+            if (type === "dangerous") {
+              route = await fetchTrimmed(pointsOrWaypoints, false);
+              directKm = route.distanceKm;
+            } else {
+              route = await fetchDistinct(pointsOrWaypoints);
+            }
             if (cancelled) return;
+            usedGeoms.add(geomKey(route));
             routesRef.current[type] = route;
             const feature = {
               type: "Feature",

@@ -1,13 +1,19 @@
 import { memo } from "react";
 import { Image, StyleSheet, TouchableOpacity, View } from "react-native";
+import { useTheme } from "../../theme/ThemeContext";
+import { MapPin, Flag, Navigation } from "lucide-react-native";
 
-// Lookup tables instead of switch functions so we don't rebuild these on every render
+// PNG images for haven and threat (files exist)
 const MARKER_IMAGES = {
   haven: require("../../../assets/markers/haven-marker.png"),
-  normal: require("../../../assets/markers/default-marker.png"),
   threat: require("../../../assets/markers/threat-marker.png"),
-  destination: require("../../../assets/markers/destination-marker.png"),
-  default: require("../../../assets/markers/default-marker.png"),
+};
+
+// Lucide icons for normal, destination, default (PNG files missing)
+const MARKER_ICONS = {
+  normal: MapPin,
+  destination: Flag,
+  default: Navigation,
 };
 
 const MARKER_COLORS = {
@@ -19,8 +25,10 @@ const MARKER_COLORS = {
 };
 
 const CustomMarker = ({ type, title, rating, onPress }) => {
-  const markerImage = MARKER_IMAGES[type] || MARKER_IMAGES.default;
+  const { colors, isDarkMode } = useTheme();
   const markerColor = MARKER_COLORS[type] || MARKER_COLORS.default;
+  const useLucideIcon = ['normal', 'destination', 'default'].includes(type);
+  const backgroundColor = useLucideIcon ? (isDarkMode ? colors.card : "#FFFFFF") : "#FFFFFF";
 
   return (
     <TouchableOpacity
@@ -28,12 +36,25 @@ const CustomMarker = ({ type, title, rating, onPress }) => {
       onPress={onPress}
       activeOpacity={0.8}
     >
-      <View style={[styles.markerBadge, { borderColor: markerColor }]}>
-        <Image
-          source={markerImage}
-          style={styles.markerIcon}
-          resizeMode="contain"
-        />
+      <View style={[styles.markerBadge, { borderColor: markerColor, backgroundColor }]}>
+        {useLucideIcon ? (
+          (() => {
+            const IconComponent = MARKER_ICONS[type];
+            return (
+              <IconComponent
+                size={32}
+                color={markerColor}
+                strokeWidth={2.5}
+              />
+            );
+          })()
+        ) : (
+          <Image
+            source={MARKER_IMAGES[type]}
+            style={styles.markerIcon}
+            resizeMode="contain"
+          />
+        )}
       </View>
     </TouchableOpacity>
   );
@@ -49,7 +70,6 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: "#FFFFFF",
     borderWidth: 3,
     justifyContent: "center",
     alignItems: "center",
