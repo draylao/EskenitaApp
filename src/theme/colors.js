@@ -52,6 +52,7 @@ export const darkTheme = {
   textPrimary: "#F5F1EC",
   textSecondary: "#A89F93",
   neonGreen: "#2ECC71",
+  pinkk: "#2ECC71",
   neonRed: "#FF5252",
   neonOrange: "#FF8A3D",
   routeFastest: "#5A5249",
